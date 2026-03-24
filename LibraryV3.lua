@@ -8385,10 +8385,12 @@ function Library:CreateWindow(WindowInfo)
         task.spawn(Library.Toggle)
     end
 
-    do
+do
         local ToggleBtnTexture = "rbxassetid://72530843154458"
-        local ToggleBtnSize = 44
-        local ToggleBtnIconSize = 26
+        
+        
+        local ToggleBtnSize = 56   
+        local ToggleBtnIconSize = 34 
 
         local ToggleBtnFrame = New("ImageButton", {
             AnchorPoint = Vector2.new(0.5, 0),
@@ -8434,7 +8436,7 @@ function Library:CreateWindow(WindowInfo)
         local function UpdateToggleButton()
             local IsOpen = Library.Toggled
 
-            -- Accent outline when enabled
+
             Library.Registry[ToggleBtnOutline].Color = IsOpen and "AccentColor" or "OutlineColor"
             local TargetOutlineColor = GetSchemeValue(IsOpen and "AccentColor" or "OutlineColor")
             TweenService:Create(ToggleBtnOutline, ToggleBtnFadeInfo, {
@@ -8443,7 +8445,6 @@ function Library:CreateWindow(WindowInfo)
             }):Play()
 
 
-            -- Animate: scale pop + rotation
             ToggleBtnIcon.Rotation = -90
             ToggleBtnIcon.Size = UDim2.fromOffset(0, 0)
             TweenService:Create(ToggleBtnIcon, ToggleBtnAnimInfo, {
@@ -8457,12 +8458,14 @@ function Library:CreateWindow(WindowInfo)
         end)
         Library:MakeDraggable(ToggleBtnFrame, ToggleBtnFrame, true)
 
-        -- Sync state on initial show
+
         local OrigToggle = Library.Toggle
         function Library:Toggle(Value)
             OrigToggle(Library, Value)
             UpdateToggleButton()
         end
+        
+        UpdateToggleButton()
     end
 
     if Library.IsMobile then
