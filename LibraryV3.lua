@@ -5686,25 +5686,20 @@ do
         -- Tab button row inside the styled container
         local TabButtonRow = New("Frame", {
             BackgroundTransparency = 1,
-            Size = UDim2.new(1, 0, 0, 32),
+            Size = UDim2.new(1, 0, 0, 36),
             Parent = TabboxWrapper,
         })
         New("UIListLayout", {
             FillDirection = Enum.FillDirection.Horizontal,
-            HorizontalAlignment = Enum.HorizontalAlignment.Left,
+            HorizontalFlex = Enum.UIFlexAlignment.Fill,
             VerticalAlignment = Enum.VerticalAlignment.Center,
-            Padding = UDim.new(0, 4),
-            Parent = TabButtonRow,
-        })
-        New("UIPadding", {
-            PaddingLeft = UDim.new(0, 6),
-            PaddingTop = UDim.new(0, 2),
+            Padding = UDim.new(0, 0),
             Parent = TabButtonRow,
         })
 
         -- Separator line between buttons and content
         Library:MakeLine(TabboxWrapper, {
-            Position = UDim2.new(0, 0, 0, 32),
+            Position = UDim2.new(0, 0, 0, 36),
             Size = UDim2.new(1, 0, 0, 1),
         })
 
@@ -5725,7 +5720,7 @@ do
             -- Icon button for this tab
             local Button = New("TextButton", {
                 BackgroundTransparency = 1,
-                Size = UDim2.fromOffset(28, 26),
+                Size = UDim2.fromOffset(0, 34),
                 Text = "",
                 Parent = TabButtonRow,
             })
@@ -5740,7 +5735,7 @@ do
                     ImageRectSize = BoxIcon.ImageRectSize,
                     ImageTransparency = 0.5,
                     Position = UDim2.fromScale(0.5, 0.5),
-                    Size = UDim2.fromOffset(16, 16),
+                    Size = UDim2.fromOffset(20, 20),
                     Parent = Button,
                 })
             end
@@ -5765,7 +5760,7 @@ do
             -- Content container for this tab's elements (inside the styled wrapper)
             local TabContainer = New("Frame", {
                 BackgroundTransparency = 1,
-                Position = UDim2.fromOffset(0, 33),
+                Position = UDim2.fromOffset(0, 37),
                 Size = UDim2.new(1, 0, 0, 0),
                 Visible = false,
                 Parent = TabboxWrapper,
@@ -5823,7 +5818,7 @@ do
 
                 local ContentHeight = TabList.AbsoluteContentSize.Y / Library.DPIScale + 11
                 TabContainer.Size = UDim2.new(1, 0, 0, ContentHeight)
-                TabboxWrapper.Size = UDim2.new(1, 0, 0, 33 + ContentHeight)
+                TabboxWrapper.Size = UDim2.new(1, 0, 0, 37 + ContentHeight)
                 Groupbox:Resize()
             end
 
@@ -8426,7 +8421,7 @@ function Library:CreateWindow(WindowInfo)
             AnchorPoint = Vector2.new(0.5, 0.5),
             BackgroundTransparency = 1,
             Image = ToggleBtnTexture,
-            ImageColor3 = "AccentColor",
+            ImageColor3 = Color3.new(1, 1, 1),
             Position = UDim2.fromScale(0.5, 0.5),
             Size = UDim2.fromOffset(ToggleBtnIconSize, ToggleBtnIconSize),
             ZIndex = 10,
