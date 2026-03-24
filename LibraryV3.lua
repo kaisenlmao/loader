@@ -5678,7 +5678,7 @@ do
             FillDirection = Enum.FillDirection.Horizontal,
             HorizontalAlignment = Enum.HorizontalAlignment.Left,
             VerticalAlignment = Enum.VerticalAlignment.Center,
-            Padding = UDim.new(0, 2),
+            Padding = UDim.new(0, 4),
             Parent = TabButtonRow,
         })
 
@@ -5694,6 +5694,7 @@ do
         }
 
         local TotalButtons = 0
+        local InnerTabTweenInfo = TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
 
         function InnerTabbox:AddTab(Name, IconName)
             TotalButtons = TotalButtons + 1
@@ -5702,9 +5703,8 @@ do
 
             -- Icon button for this tab
             local Button = New("TextButton", {
-                BackgroundColor3 = "MainColor",
-                BackgroundTransparency = 0,
-                Size = UDim2.fromOffset(30, 26),
+                BackgroundTransparency = 1,
+                Size = UDim2.fromOffset(32, 28),
                 Text = "",
                 Parent = TabButtonRow,
             })
@@ -5730,6 +5730,23 @@ do
                     Parent = Button,
                 })
             end
+
+            -- Accent indicator bar at the bottom
+            local Indicator = New("Frame", {
+                AnchorPoint = Vector2.new(0.5, 1),
+                BackgroundColor3 = "AccentColor",
+                BackgroundTransparency = 1,
+                Position = UDim2.new(0.5, 0, 1, 0),
+                Size = UDim2.new(0.5, 0, 0, 2),
+                Parent = Button,
+            })
+            table.insert(
+                Library.Corners,
+                New("UICorner", {
+                    CornerRadius = UDim.new(1, 0),
+                    Parent = Indicator,
+                })
+            )
 
             -- Content container for this tab's elements
             local TabContainer = New("Frame", {
@@ -5762,10 +5779,10 @@ do
                     InnerTabbox.ActiveTab:Hide()
                 end
 
-                Button.BackgroundTransparency = 1
                 if ButtonIcon then
-                    ButtonIcon.ImageTransparency = 0
+                    TweenService:Create(ButtonIcon, InnerTabTweenInfo, { ImageTransparency = 0 }):Play()
                 end
+                TweenService:Create(Indicator, InnerTabTweenInfo, { BackgroundTransparency = 0, Size = UDim2.new(0.5, 0, 0, 2) }):Play()
                 TabContainer.Visible = true
 
                 InnerTabbox.ActiveTab = Tab
@@ -5773,10 +5790,10 @@ do
             end
 
             function Tab:Hide()
-                Button.BackgroundTransparency = 0
                 if ButtonIcon then
-                    ButtonIcon.ImageTransparency = 0.5
+                    TweenService:Create(ButtonIcon, InnerTabTweenInfo, { ImageTransparency = 0.5 }):Play()
                 end
+                TweenService:Create(Indicator, InnerTabTweenInfo, { BackgroundTransparency = 1, Size = UDim2.new(0, 0, 0, 2) }):Play()
                 TabContainer.Visible = false
 
                 InnerTabbox.ActiveTab = nil
@@ -7247,49 +7264,10 @@ function Library:CreateWindow(WindowInfo)
                 local BoxIcon = Library:GetCustomIcon(IconName)
 
                 local Button = New("TextButton", {
-                    BackgroundColor3 = "MainColor",
-                    BackgroundTransparency = 0,
+                    BackgroundTransparency = 1,
                     Size = UDim2.fromOffset(0, 34),
                     Text = "",
                     Parent = TabboxButtons,
-                })
-
-                table.insert(
-                    Library.Corners,
-                    New("UICorner", {
-                        CornerRadius = UDim.new(0, WindowInfo.CornerRadius),
-                        Parent = Button,
-                    })
-                )
-
-                local BottomCover = New("Frame", {
-                    Name = "BottomCover",
-                    BackgroundColor3 = "MainColor",
-                    BorderSizePixel = 0,
-                    Position = UDim2.new(0, 0, 1, -WindowInfo.CornerRadius),
-                    Size = UDim2.new(1, 0, 0, WindowInfo.CornerRadius),
-                    Parent = Button,
-                })
-
-                local LeftCover = New("Frame", {
-                    Name = "LeftCover",
-                    BackgroundColor3 = "MainColor",
-                    BorderSizePixel = 0,
-                    Position = UDim2.new(0, 0, 0, 0),
-                    Size = UDim2.new(0, WindowInfo.CornerRadius, 1, 0),
-                    Visible = false,
-                    Parent = Button,
-                })
-
-                local RightCover = New("Frame", {
-                    Name = "RightCover",
-                    AnchorPoint = Vector2.new(1, 0),
-                    BackgroundColor3 = "MainColor",
-                    BorderSizePixel = 0,
-                    Position = UDim2.new(1, 0, 0, 0),
-                    Size = UDim2.new(0, WindowInfo.CornerRadius, 1, 0),
-                    Visible = false,
-                    Parent = Button,
                 })
 
                 local ButtonContent = New("Frame", {
@@ -7331,6 +7309,23 @@ function Library:CreateWindow(WindowInfo)
                     Parent = ButtonContent,
                 })
 
+                -- Accent indicator bar at the bottom of the button
+                local Indicator = New("Frame", {
+                    AnchorPoint = Vector2.new(0.5, 1),
+                    BackgroundColor3 = "AccentColor",
+                    BackgroundTransparency = 1,
+                    Position = UDim2.new(0.5, 0, 1, -1),
+                    Size = UDim2.new(0.5, 0, 0, 2),
+                    Parent = Button,
+                })
+                table.insert(
+                    Library.Corners,
+                    New("UICorner", {
+                        CornerRadius = UDim.new(1, 0),
+                        Parent = Indicator,
+                    })
+                )
+
                 local Line = Library:MakeLine(Button, {
                     AnchorPoint = Vector2.new(0, 1),
                     Position = UDim2.new(0, 0, 1, 1),
@@ -7356,14 +7351,16 @@ function Library:CreateWindow(WindowInfo)
                     Parent = Container,
                 })
 
+                local TabTweenInfo = TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+
                 local Tab = {
                     ButtonHolder = Button,
                     Container = Container,
 
                     ButtonCovers = {
-                        BottomCover = BottomCover,
-                        LeftCover = LeftCover,
-                        RightCover = RightCover
+                        BottomCover = Indicator,
+                        LeftCover = Indicator,
+                        RightCover = Indicator
                     },
 
                     Tab = Tab,
@@ -7376,15 +7373,12 @@ function Library:CreateWindow(WindowInfo)
                         Tabbox.ActiveTab:Hide()
                     end
 
-                    Button.BackgroundTransparency = 1
-                    BottomCover.BackgroundTransparency = 1
-                    LeftCover.BackgroundTransparency = 1
-                    RightCover.BackgroundTransparency = 1
-
-                    ButtonLabel.TextTransparency = 0
+                    TweenService:Create(ButtonLabel, TabTweenInfo, { TextTransparency = 0 }):Play()
                     if ButtonIcon then
-                        ButtonIcon.ImageTransparency = 0
+                        TweenService:Create(ButtonIcon, TabTweenInfo, { ImageTransparency = 0 }):Play()
                     end
+                    -- Show accent indicator
+                    TweenService:Create(Indicator, TabTweenInfo, { BackgroundTransparency = 0, Size = UDim2.new(0.5, 0, 0, 2) }):Play()
                     Line.Visible = false
 
                     Container.Visible = true
@@ -7394,15 +7388,12 @@ function Library:CreateWindow(WindowInfo)
                 end
 
                 function Tab:Hide()
-                    Button.BackgroundTransparency = 0
-                    BottomCover.BackgroundTransparency = 0
-                    LeftCover.BackgroundTransparency = 0
-                    RightCover.BackgroundTransparency = 0
-
-                    ButtonLabel.TextTransparency = 0.5
+                    TweenService:Create(ButtonLabel, TabTweenInfo, { TextTransparency = 0.5 }):Play()
                     if ButtonIcon then
-                        ButtonIcon.ImageTransparency = 0.5
+                        TweenService:Create(ButtonIcon, TabTweenInfo, { ImageTransparency = 0.5 }):Play()
                     end
+                    -- Hide accent indicator
+                    TweenService:Create(Indicator, TabTweenInfo, { BackgroundTransparency = 1, Size = UDim2.new(0, 0, 0, 2) }):Play()
                     Line.Visible = true
                     Container.Visible = false
 
@@ -7418,14 +7409,7 @@ function Library:CreateWindow(WindowInfo)
                 end
 
                 function Tab:UpdateCorners()
-                    LeftCover.Visible = TabIndex ~= 1
-                    RightCover.Visible = TabIndex ~= TotalButtons
-        
-                    BottomCover.Position = UDim2.new(0, 0, 1, -WindowInfo.CornerRadius)
-                    BottomCover.Size = UDim2.new(1, 0, 0, WindowInfo.CornerRadius)
-        
-                    LeftCover.Size = UDim2.new(0, WindowInfo.CornerRadius, 1, 0)
-                    RightCover.Size = UDim2.new(0, WindowInfo.CornerRadius, 1, 0)
+                    -- No-op: corner covers no longer needed
                 end
 
                 --// Execution \\--
@@ -8388,10 +8372,10 @@ function Library:CreateWindow(WindowInfo)
     end
 
     do
-        local EyeIcon = Library:GetIcon("eye")
-        local EyeOffIcon = Library:GetIcon("eye-off")
+        local ToggleBtnTexture = "rbxassetid://72530843154458"
+        local ToggleBtnSize = 44
+        local ToggleBtnIconSize = 26
 
-        local ToggleBtnSize = 36
         local ToggleBtnFrame = New("ImageButton", {
             AnchorPoint = Vector2.new(0.5, 0),
             BackgroundColor3 = "BackgroundColor",
@@ -8401,13 +8385,10 @@ function Library:CreateWindow(WindowInfo)
             ZIndex = 10,
             Parent = ScreenGui,
         })
-        table.insert(
-            Library.Corners,
-            New("UICorner", {
-                CornerRadius = UDim.new(0, Library.CornerRadius),
-                Parent = ToggleBtnFrame,
-            })
-        )
+        New("UICorner", {
+            CornerRadius = UDim.new(1, 0),
+            Parent = ToggleBtnFrame,
+        })
 
         local ToggleBtnOutline = New("UIStroke", {
             Color = "OutlineColor",
@@ -8425,34 +8406,31 @@ function Library:CreateWindow(WindowInfo)
         local ToggleBtnIcon = New("ImageLabel", {
             AnchorPoint = Vector2.new(0.5, 0.5),
             BackgroundTransparency = 1,
-            Image = (EyeOffIcon and EyeOffIcon.Url) or "",
-            ImageColor3 = "FontColor",
-            ImageRectOffset = EyeOffIcon and EyeOffIcon.ImageRectOffset or Vector2.zero,
-            ImageRectSize = EyeOffIcon and EyeOffIcon.ImageRectSize or Vector2.zero,
+            Image = ToggleBtnTexture,
+            ImageColor3 = "AccentColor",
             Position = UDim2.fromScale(0.5, 0.5),
-            Size = UDim2.fromOffset(20, 20),
+            Size = UDim2.fromOffset(ToggleBtnIconSize, ToggleBtnIconSize),
             ZIndex = 10,
             Parent = ToggleBtnFrame,
         })
 
         local ToggleBtnAnimInfo = TweenInfo.new(0.25, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
+        local ToggleBtnFadeInfo = TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
 
         local function UpdateToggleButton()
             local IsOpen = Library.Toggled
-            local Icon = IsOpen and EyeIcon or EyeOffIcon
-
-            if Icon then
-                ToggleBtnIcon.Image = Icon.Url
-                ToggleBtnIcon.ImageRectOffset = Icon.ImageRectOffset
-                ToggleBtnIcon.ImageRectSize = Icon.ImageRectSize
-            end
 
             -- Accent outline when enabled
             Library.Registry[ToggleBtnOutline].Color = IsOpen and "AccentColor" or "OutlineColor"
             local TargetOutlineColor = GetSchemeValue(IsOpen and "AccentColor" or "OutlineColor")
-            TweenService:Create(ToggleBtnOutline, ToggleBtnAnimInfo, {
+            TweenService:Create(ToggleBtnOutline, ToggleBtnFadeInfo, {
                 Color = TargetOutlineColor,
                 Thickness = IsOpen and 1.5 or 1,
+            }):Play()
+
+            -- Icon transparency: full opacity when enabled, dimmed when disabled
+            TweenService:Create(ToggleBtnIcon, ToggleBtnFadeInfo, {
+                ImageTransparency = IsOpen and 0 or 0.5,
             }):Play()
 
             -- Animate: scale pop + rotation
@@ -8460,7 +8438,7 @@ function Library:CreateWindow(WindowInfo)
             ToggleBtnIcon.Size = UDim2.fromOffset(0, 0)
             TweenService:Create(ToggleBtnIcon, ToggleBtnAnimInfo, {
                 Rotation = 0,
-                Size = UDim2.fromOffset(20, 20),
+                Size = UDim2.fromOffset(ToggleBtnIconSize, ToggleBtnIconSize),
             }):Play()
         end
 
