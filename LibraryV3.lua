@@ -5668,6 +5668,10 @@ do
         local Groupbox = self
         local Container = Groupbox.Container
 
+        if Groupbox.TitleLine then
+            Groupbox.TitleLine.Visible = false
+        end
+
         -- Outer wrapper in the parent groupbox's list
         local TabboxWrapper = New("Frame", {
             BackgroundColor3 = "BackgroundColor",
@@ -7119,7 +7123,7 @@ function Library:CreateWindow(WindowInfo)
                 )
                 Library:AddOutline(GroupboxHolder)
 
-                Library:MakeLine(GroupboxHolder, {
+                local GroupboxTitleLine = Library:MakeLine(GroupboxHolder, {
                     Position = UDim2.fromOffset(0, 34),
                     Size = UDim2.new(1, 0, 0, 1),
                 })
@@ -7176,6 +7180,7 @@ function Library:CreateWindow(WindowInfo)
                 BoxHolder = BoxHolder,
                 Holder = GroupboxHolder,
                 Container = GroupboxContainer,
+                TitleLine = GroupboxTitleLine,
 
                 Tab = Tab,
                 DependencyBoxes = {},
@@ -7530,6 +7535,7 @@ function Library:CreateWindow(WindowInfo)
             Tab:Hover(false)
         end)
         TabButton.MouseButton1Click:Connect(Tab.Show)
+        Library:AddTooltip(Name, nil, TabButton)
 
         Library.Tabs[Name] = Tab
 
@@ -7768,6 +7774,7 @@ function Library:CreateWindow(WindowInfo)
             Tab:Hover(false)
         end)
         TabButton.MouseButton1Click:Connect(Tab.Show)
+        Library:AddTooltip(Name, nil, TabButton)
 
         Tab.Container = TabContainer
         setmetatable(Tab, BaseGroupbox)
