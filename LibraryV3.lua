@@ -5668,6 +5668,10 @@ do
         local Groupbox = self
         local Container = Groupbox.Container
 
+        if Groupbox.DividerLine then
+            Groupbox.DividerLine.Visible = false
+        end
+
         -- Outer wrapper in the parent groupbox's list
         local TabboxWrapper = New("Frame", {
             BackgroundColor3 = "BackgroundColor",
@@ -7181,6 +7185,7 @@ function Library:CreateWindow(WindowInfo)
                 BoxHolder = BoxHolder,
                 Holder = GroupboxHolder,
                 Container = GroupboxContainer,
+                DividerLine = GroupboxDividerLine,
 
                 Tab = Tab,
                 DependencyBoxes = {},
@@ -7283,6 +7288,8 @@ function Library:CreateWindow(WindowInfo)
                     Text = "",
                     Parent = TabboxButtons,
                 })
+
+                Library:AddTooltip(Name, nil, Button)
 
                 local ButtonContent = New("Frame", {
                     AnchorPoint = Vector2.new(0.5, 0.5),
@@ -8389,7 +8396,7 @@ do
         local ToggleBtnTexture = "rbxassetid://72530843154458"
         
         local ToggleBtnSize = 56   
-        local ToggleBtnIconSize = 39
+        local ToggleBtnIconSize = 34 
 
         local ToggleBtnFrame = New("ImageButton", {
             AnchorPoint = Vector2.new(0.5, 0),
