@@ -8388,7 +8388,6 @@ function Library:CreateWindow(WindowInfo)
 do
         local ToggleBtnTexture = "rbxassetid://72530843154458"
         
-        
         local ToggleBtnSize = 56   
         local ToggleBtnIconSize = 34 
 
@@ -8407,8 +8406,8 @@ do
         })
 
         local ToggleBtnOutline = New("UIStroke", {
-            Color = "OutlineColor",
-            Thickness = 1,
+            Color = Library.Toggled and "AccentColor" or "OutlineColor",
+            Thickness = Library.Toggled and 1.5 or 1,
             ZIndex = 2,
             Parent = ToggleBtnFrame,
         })
@@ -8433,24 +8432,30 @@ do
         local ToggleBtnAnimInfo = TweenInfo.new(0.25, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
         local ToggleBtnFadeInfo = TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
 
-        local function UpdateToggleButton()
+        local function UpdateToggleButton(SkipAnim)
             local IsOpen = Library.Toggled
 
 
             Library.Registry[ToggleBtnOutline].Color = IsOpen and "AccentColor" or "OutlineColor"
             local TargetOutlineColor = GetSchemeValue(IsOpen and "AccentColor" or "OutlineColor")
-            TweenService:Create(ToggleBtnOutline, ToggleBtnFadeInfo, {
-                Color = TargetOutlineColor,
-                Thickness = IsOpen and 1.5 or 1,
-            }):Play()
 
+            if SkipAnim then
+                ToggleBtnOutline.Color = TargetOutlineColor
+                ToggleBtnOutline.Thickness = IsOpen and 1.5 or 1
+            else
+                
+                TweenService:Create(ToggleBtnOutline, ToggleBtnFadeInfo, {
+                    Color = TargetOutlineColor,
+                    Thickness = IsOpen and 1.5 or 1,
+                }):Play()
 
-            ToggleBtnIcon.Rotation = -90
-            ToggleBtnIcon.Size = UDim2.fromOffset(0, 0)
-            TweenService:Create(ToggleBtnIcon, ToggleBtnAnimInfo, {
-                Rotation = 0,
-                Size = UDim2.fromOffset(ToggleBtnIconSize, ToggleBtnIconSize),
-            }):Play()
+                ToggleBtnIcon.Rotation = -90
+                ToggleBtnIcon.Size = UDim2.fromOffset(0, 0)
+                TweenService:Create(ToggleBtnIcon, ToggleBtnAnimInfo, {
+                    Rotation = 0,
+                    Size = UDim2.fromOffset(ToggleBtnIconSize, ToggleBtnIconSize),
+                }):Play()
+            end
         end
 
         ToggleBtnFrame.MouseButton1Click:Connect(function()
@@ -8458,14 +8463,13 @@ do
         end)
         Library:MakeDraggable(ToggleBtnFrame, ToggleBtnFrame, true)
 
-
         local OrigToggle = Library.Toggle
         function Library:Toggle(Value)
             OrigToggle(Library, Value)
-            UpdateToggleButton()
+            UpdateToggleButton(false) 
         end
         
-        UpdateToggleButton()
+        UpdateToggleButton(true)
     end
 
     if Library.IsMobile then
