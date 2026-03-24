@@ -1,4 +1,3 @@
-print("Library Loaded")
 local cloneref = (cloneref or clonereference or function(instance: any)
     return instance
 end)
@@ -5669,10 +5668,6 @@ do
         local Groupbox = self
         local Container = Groupbox.Container
 
-        if Groupbox.DividerLine then
-            Groupbox.DividerLine.Visible = false
-        end
-
         -- Outer wrapper in the parent groupbox's list
         local TabboxWrapper = New("Frame", {
             BackgroundColor3 = "BackgroundColor",
@@ -5700,12 +5695,6 @@ do
             VerticalAlignment = Enum.VerticalAlignment.Center,
             Padding = UDim.new(0, 0),
             Parent = TabButtonRow,
-        })
-
-        -- Separator line between buttons and content
-        Library:MakeLine(TabboxWrapper, {
-            Position = UDim2.new(0, 0, 0, 36),
-            Size = UDim2.new(1, 0, 0, 1),
         })
 
         local InnerTabbox = {
@@ -5833,6 +5822,7 @@ do
             end
 
             Button.MouseButton1Click:Connect(Tab.Show)
+            Library:AddTooltip(Name, nil, Button)
 
             setmetatable(Tab, BaseGroupbox)
 
@@ -7186,7 +7176,6 @@ function Library:CreateWindow(WindowInfo)
                 BoxHolder = BoxHolder,
                 Holder = GroupboxHolder,
                 Container = GroupboxContainer,
-                DividerLine = GroupboxDividerLine,
 
                 Tab = Tab,
                 DependencyBoxes = {},
@@ -7289,8 +7278,6 @@ function Library:CreateWindow(WindowInfo)
                     Text = "",
                     Parent = TabboxButtons,
                 })
-
-                Library:AddTooltip(Name, nil, Button)
 
                 local ButtonContent = New("Frame", {
                     AnchorPoint = Vector2.new(0.5, 0.5),
