@@ -5668,11 +5668,26 @@ do
         local Groupbox = self
         local Container = Groupbox.Container
 
-        -- Tab button row (icon-only horizontal strip)
+        -- Outer wrapper in the parent groupbox's list
+        local TabboxWrapper = New("Frame", {
+            BackgroundColor3 = "BackgroundColor",
+            Size = UDim2.fromScale(1, 0),
+            Parent = Container,
+        })
+        table.insert(
+            Library.Corners,
+            New("UICorner", {
+                CornerRadius = UDim.new(0, Library.CornerRadius),
+                Parent = TabboxWrapper,
+            })
+        )
+        Library:AddOutline(TabboxWrapper)
+
+        -- Tab button row inside the styled container
         local TabButtonRow = New("Frame", {
             BackgroundTransparency = 1,
-            Size = UDim2.new(1, 0, 0, 30),
-            Parent = Container,
+            Size = UDim2.new(1, 0, 0, 32),
+            Parent = TabboxWrapper,
         })
         New("UIListLayout", {
             FillDirection = Enum.FillDirection.Horizontal,
@@ -5681,9 +5696,15 @@ do
             Padding = UDim.new(0, 4),
             Parent = TabButtonRow,
         })
+        New("UIPadding", {
+            PaddingLeft = UDim.new(0, 6),
+            PaddingTop = UDim.new(0, 2),
+            Parent = TabButtonRow,
+        })
 
-        -- Separator line below the tab buttons
-        Library:MakeLine(Container, {
+        -- Separator line between buttons and content
+        Library:MakeLine(TabboxWrapper, {
+            Position = UDim2.new(0, 0, 0, 32),
             Size = UDim2.new(1, 0, 0, 1),
         })
 
@@ -5704,17 +5725,10 @@ do
             -- Icon button for this tab
             local Button = New("TextButton", {
                 BackgroundTransparency = 1,
-                Size = UDim2.fromOffset(32, 28),
+                Size = UDim2.fromOffset(28, 26),
                 Text = "",
                 Parent = TabButtonRow,
             })
-            table.insert(
-                Library.Corners,
-                New("UICorner", {
-                    CornerRadius = UDim.new(0, Library.CornerRadius),
-                    Parent = Button,
-                })
-            )
 
             local ButtonIcon
             if BoxIcon then
@@ -5737,7 +5751,7 @@ do
                 BackgroundColor3 = "AccentColor",
                 BackgroundTransparency = 1,
                 Position = UDim2.new(0.5, 0, 1, 0),
-                Size = UDim2.new(0.5, 0, 0, 2),
+                Size = UDim2.new(0.6, 0, 0, 2),
                 Parent = Button,
             })
             table.insert(
@@ -5748,20 +5762,23 @@ do
                 })
             )
 
-            -- Content container for this tab's elements
+            -- Content container for this tab's elements (inside the styled wrapper)
             local TabContainer = New("Frame", {
                 BackgroundTransparency = 1,
-                Size = UDim2.fromScale(1, 0),
+                Position = UDim2.fromOffset(0, 33),
+                Size = UDim2.new(1, 0, 0, 0),
                 Visible = false,
-                Parent = Container,
+                Parent = TabboxWrapper,
             })
             local TabList = New("UIListLayout", {
                 Padding = UDim.new(0, 8),
                 Parent = TabContainer,
             })
             New("UIPadding", {
-                PaddingBottom = UDim.new(0, 2),
-                PaddingTop = UDim.new(0, 4),
+                PaddingBottom = UDim.new(0, 6),
+                PaddingLeft = UDim.new(0, 7),
+                PaddingRight = UDim.new(0, 7),
+                PaddingTop = UDim.new(0, 5),
                 Parent = TabContainer,
             })
 
@@ -5782,7 +5799,7 @@ do
                 if ButtonIcon then
                     TweenService:Create(ButtonIcon, InnerTabTweenInfo, { ImageTransparency = 0 }):Play()
                 end
-                TweenService:Create(Indicator, InnerTabTweenInfo, { BackgroundTransparency = 0, Size = UDim2.new(0.5, 0, 0, 2) }):Play()
+                TweenService:Create(Indicator, InnerTabTweenInfo, { BackgroundTransparency = 0, Size = UDim2.new(0.6, 0, 0, 2) }):Play()
                 TabContainer.Visible = true
 
                 InnerTabbox.ActiveTab = Tab
@@ -5804,7 +5821,9 @@ do
                     return
                 end
 
-                TabContainer.Size = UDim2.new(1, 0, 0, TabList.AbsoluteContentSize.Y / Library.DPIScale + 6)
+                local ContentHeight = TabList.AbsoluteContentSize.Y / Library.DPIScale + 11
+                TabContainer.Size = UDim2.new(1, 0, 0, ContentHeight)
+                TabboxWrapper.Size = UDim2.new(1, 0, 0, 33 + ContentHeight)
                 Groupbox:Resize()
             end
 
@@ -8428,10 +8447,6 @@ function Library:CreateWindow(WindowInfo)
                 Thickness = IsOpen and 1.5 or 1,
             }):Play()
 
-            -- Icon transparency: full opacity when enabled, dimmed when disabled
-            TweenService:Create(ToggleBtnIcon, ToggleBtnFadeInfo, {
-                ImageTransparency = IsOpen and 0 or 0.5,
-            }):Play()
 
             -- Animate: scale pop + rotation
             ToggleBtnIcon.Rotation = -90
