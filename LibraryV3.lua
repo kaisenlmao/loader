@@ -5669,7 +5669,8 @@ do
         local Container = Groupbox.Container
 
         if Groupbox.TitleLine then
-            Groupbox.TitleLine.Visible = false
+            Groupbox.TitleLine:Destroy()
+            Groupbox.TitleLine = nil
         end
 
         -- Outer wrapper in the parent groupbox's list
@@ -7104,6 +7105,7 @@ function Library:CreateWindow(WindowInfo)
 
             local GroupboxHolder
             local GroupboxLabel
+            local GroupboxTitleLine
 
             local GroupboxContainer
             local GroupboxList
@@ -7123,7 +7125,7 @@ function Library:CreateWindow(WindowInfo)
                 )
                 Library:AddOutline(GroupboxHolder)
 
-                local GroupboxTitleLine = Library:MakeLine(GroupboxHolder, {
+                GroupboxTitleLine = Library:MakeLine(GroupboxHolder, {
                     Position = UDim2.fromOffset(0, 34),
                     Size = UDim2.new(1, 0, 0, 1),
                 })
