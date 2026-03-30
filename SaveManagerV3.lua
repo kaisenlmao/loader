@@ -122,7 +122,7 @@ local SaveManager = {} do
         })
     end
 
-   
+    
     function SaveManager:CheckSubFolder(createFolder)
         if typeof(self.SubFolder) ~= "string" or self.SubFolder == "" then return false end
 
@@ -297,7 +297,7 @@ local SaveManager = {} do
             for i = 1, #list do
                 local file = list[i]
                 if file:sub(-5) == ".json" then
-                   
+                    
 
                     local pos = file:find(".json", 1, true)
                     local start = pos
@@ -405,7 +405,7 @@ local SaveManager = {} do
         return true, ""
     end
 
-   
+    
     function SaveManager:BuildConfigSection(tab)
         assert(self.Library, "Must set SaveManager.Library")
 
@@ -501,32 +501,49 @@ local SaveManager = {} do
 
         self.AutoloadConfigLabel = section:AddLabel("Current autoload config: " .. self:GetAutoloadConfig(), true)
 
-       
+        
 
         section:AddDivider()
 
+        local typeToCode = { Toggle = "T", Slider = "S", Dropdown = "D", ColorPicker = "C", KeyPicker = "K", Input = "I" }
+        local codeToType = { T = "Toggle", S = "Slider", D = "Dropdown", C = "ColorPicker", K = "KeyPicker", I = "Input" }
+
         section:AddButton("Export config", function()
-            local data = {
-                objects = {}
-            }
+            local items = {}
 
             for idx, toggle in pairs(self.Library.Toggles) do
-                if not toggle.Type then continue end
-                if not self.Parser[toggle.Type] then continue end
-                if self.Ignore[idx] then continue end
+                if not toggle.Type or not self.Parser[toggle.Type] or self.Ignore[idx] then continue end
+                local saved = self.Parser[toggle.Type].Save(idx, toggle)
+                local code = typeToCode[saved.type]
+                if not code then continue end
 
-                table.insert(data.objects, self.Parser[toggle.Type].Save(idx, toggle))
+                local compact = { t = code, i = saved.idx, v = saved.value }
+                if saved.multi ~= nil then compact.m = saved.multi end
+                if saved.transparency ~= nil then compact.a = saved.transparency end
+                if saved.mode ~= nil then compact.o = saved.mode end
+                if saved.key ~= nil then compact.k = saved.key end
+                if saved.modifiers ~= nil then compact.x = saved.modifiers end
+                if saved.text ~= nil then compact.v = saved.text end
+                table.insert(items, compact)
             end
 
             for idx, option in pairs(self.Library.Options) do
-                if not option.Type then continue end
-                if not self.Parser[option.Type] then continue end
-                if self.Ignore[idx] then continue end
+                if not option.Type or not self.Parser[option.Type] or self.Ignore[idx] then continue end
+                local saved = self.Parser[option.Type].Save(idx, option)
+                local code = typeToCode[saved.type]
+                if not code then continue end
 
-                table.insert(data.objects, self.Parser[option.Type].Save(idx, option))
+                local compact = { t = code, i = saved.idx, v = saved.value }
+                if saved.multi ~= nil then compact.m = saved.multi end
+                if saved.transparency ~= nil then compact.a = saved.transparency end
+                if saved.mode ~= nil then compact.o = saved.mode end
+                if saved.key ~= nil then compact.k = saved.key end
+                if saved.modifiers ~= nil then compact.x = saved.modifiers end
+                if saved.text ~= nil then compact.v = saved.text end
+                table.insert(items, compact)
             end
 
-            local success, encoded = pcall(HttpService.JSONEncode, HttpService, data)
+            local success, encoded = pcall(HttpService.JSONEncode, HttpService, items)
             if not success then
                 self.Library:Notify("Failed to export config")
                 return
@@ -556,17 +573,25 @@ local SaveManager = {} do
             end
 
             local success, decoded = pcall(HttpService.JSONDecode, HttpService, rawJson)
-            if not success or typeof(decoded) ~= "table" or not decoded.objects then
+            if not success or typeof(decoded) ~= "table" then
                 self.Library:Notify("Invalid config data")
                 return
             end
 
-            for _, option in pairs(decoded.objects) do
-                if not option.type then continue end
-                if not self.Parser[option.type] then continue end
-                if self.Ignore[option.idx] then continue end
+            for _, item in pairs(decoded) do
+                local fullType = codeToType[item.t]
+                if not fullType or not self.Parser[fullType] then continue end
+                if not item.i or self.Ignore[item.i] then continue end
 
-                task.spawn(self.Parser[option.type].Load, option.idx, option)
+                local expanded = { type = fullType, idx = item.i, value = item.v }
+                if item.m ~= nil then expanded.multi = item.m end
+                if item.a ~= nil then expanded.transparency = item.a end
+                if item.o ~= nil then expanded.mode = item.o end
+                if item.k ~= nil then expanded.key = item.k end
+                if item.x ~= nil then expanded.modifiers = item.x end
+                if fullType == "Input" then expanded.text = item.v end
+
+                task.spawn(self.Parser[fullType].Load, expanded.idx, expanded)
             end
 
             self.Library:Notify("Config imported successfully")
