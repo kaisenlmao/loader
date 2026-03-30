@@ -3103,7 +3103,8 @@ do
                 AutomaticSize = Enum.AutomaticSize.X,
                 BackgroundTransparency = 1,
                 Size = UDim2.fromScale(1, 0),
-                Text = Text,
+                Text = AccentColor and ("<b>" .. Text .. "</b>") or Text,
+                RichText = AccentColor,
                 TextSize = 14,
                 TextTransparency = AccentColor and 0 or 0.5,
                 TextXAlignment = Enum.TextXAlignment.Center,
@@ -3113,10 +3114,17 @@ do
             if AccentColor then
                 TextLabel.TextColor3 = Library.Scheme.AccentColor
                 Library.Registry[TextLabel].TextColor3 = "AccentColor"
+
+                local Glow = New("UIStroke", {
+                    Transparency = 0.5,
+                    Color = Library.Scheme.AccentColor,
+                    Parent = TextLabel,
+                })
+                Library.Registry[Glow].Color = "AccentColor"
             end
 
             local X, _ = Library:GetTextBounds(Text, TextLabel.FontFace, TextLabel.TextSize, TextLabel.AbsoluteSize.X)
-            local SizeX = X // 2 + 10
+            local SizeX = X // 2 + (AccentColor and 14 or 10)
 
             New("Frame", {
                 AnchorPoint = Vector2.new(0, 0.5),
