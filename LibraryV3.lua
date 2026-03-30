@@ -3115,12 +3115,11 @@ do
                 TextLabel.TextColor3 = Library.Scheme.AccentColor
                 Library.Registry[TextLabel].TextColor3 = "AccentColor"
 
-                local Glow = New("UIStroke", {
+                New("UIStroke", {
                     Transparency = 0.5,
-                    Color = Library.Scheme.AccentColor,
+                    Color = "AccentColor",
                     Parent = TextLabel,
                 })
-                Library.Registry[Glow].Color = "AccentColor"
             end
 
             local X, _ = Library:GetTextBounds(Text, TextLabel.FontFace, TextLabel.TextSize, TextLabel.AbsoluteSize.X)
