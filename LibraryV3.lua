@@ -3099,50 +3099,73 @@ do
         })
 
         if Text then
+            
+            local BoldFont = Font.new(Library.Scheme.Font.Family, Enum.FontWeight.Bold)
+
             local TextLabel = New("TextLabel", {
                 AutomaticSize = Enum.AutomaticSize.X,
                 BackgroundTransparency = 1,
                 Size = UDim2.fromScale(1, 0),
-                Text = AccentColor and ("<b>" .. Text .. "</b>") or Text,
-                RichText = AccentColor,
-                TextSize = 14,
-                TextTransparency = AccentColor and 0 or 0.5,
+                Text = string.upper(Text),
+                TextSize = 13,
+                FontFace = BoldFont,
+                TextTransparency = AccentColor and 0 or 0.35,
                 TextXAlignment = Enum.TextXAlignment.Center,
                 Parent = InnerHolder,
             })
+
+            
+            if Library.Registry[TextLabel] then
+                Library.Registry[TextLabel].FontFace = nil
+            end
 
             if AccentColor then
                 TextLabel.TextColor3 = Library.Scheme.AccentColor
                 Library.Registry[TextLabel].TextColor3 = "AccentColor"
 
-                New("UIStroke", {
-                    Transparency = 0.5,
-                    Color = "AccentColor",
+                
+                local GlowStroke = New("UIStroke", {
+                    Color = Library.Scheme.AccentColor,
+                    Transparency = 0.65,
+                    Thickness = 1,
+                    ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual,
                     Parent = TextLabel,
                 })
+                Library.Registry[GlowStroke] = { Color = "AccentColor" }
             end
 
-            local X, _ = Library:GetTextBounds(Text, TextLabel.FontFace, TextLabel.TextSize, TextLabel.AbsoluteSize.X)
-            local SizeX = X // 2 + (AccentColor and 14 or 10)
+            local X, _ = Library:GetTextBounds(string.upper(Text), BoldFont, TextLabel.TextSize, TextLabel.AbsoluteSize.X)
+            local SizeX = X // 2 + 12
 
-            New("Frame", {
+            
+            local LeftLine = New("Frame", {
                 AnchorPoint = Vector2.new(0, 0.5),
-                BackgroundColor3 = "MainColor",
-                BorderColor3 = "OutlineColor",
-                BorderSizePixel = 1,
+                BackgroundColor3 = AccentColor and Library.Scheme.AccentColor or "MainColor",
+                BackgroundTransparency = AccentColor and 0.7 or 0,
+                BorderColor3 = AccentColor and Library.Scheme.AccentColor or "OutlineColor",
+                BorderSizePixel = AccentColor and 0 or 1,
                 Position = UDim2.fromScale(0, 0.5),
-                Size = UDim2.new(0.5, -SizeX, 0, 2),
+                Size = UDim2.new(0.5, -SizeX, 0, AccentColor and 1 or 2),
                 Parent = InnerHolder,
             })
-            New("Frame", {
+            if AccentColor then
+                Library.Registry[LeftLine] = { BackgroundColor3 = "AccentColor", BorderColor3 = "AccentColor" }
+            end
+
+            
+            local RightLine = New("Frame", {
                 AnchorPoint = Vector2.new(1, 0.5),
-                BackgroundColor3 = "MainColor",
-                BorderColor3 = "OutlineColor",
-                BorderSizePixel = 1,
+                BackgroundColor3 = AccentColor and Library.Scheme.AccentColor or "MainColor",
+                BackgroundTransparency = AccentColor and 0.7 or 0,
+                BorderColor3 = AccentColor and Library.Scheme.AccentColor or "OutlineColor",
+                BorderSizePixel = AccentColor and 0 or 1,
                 Position = UDim2.fromScale(1, 0.5),
-                Size = UDim2.new(0.5, -SizeX, 0, 2),
+                Size = UDim2.new(0.5, -SizeX, 0, AccentColor and 1 or 2),
                 Parent = InnerHolder,
             })
+            if AccentColor then
+                Library.Registry[RightLine] = { BackgroundColor3 = "AccentColor", BorderColor3 = "AccentColor" }
+            end
         else
             New("Frame", {
                 AnchorPoint = Vector2.new(0, 0.5),
