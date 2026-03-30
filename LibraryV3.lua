@@ -3145,7 +3145,7 @@ do
                 BorderColor3 = AccentColor and Library.Scheme.AccentColor or "OutlineColor",
                 BorderSizePixel = AccentColor and 0 or 1,
                 Position = UDim2.fromScale(0, 0.5),
-                Size = UDim2.new(0.5, -SizeX, 0, 2),
+                Size = UDim2.new(0.5, -SizeX, 0, 3.5),
                 Parent = InnerHolder,
             })
             if AccentColor then
@@ -3160,7 +3160,7 @@ do
                 BorderColor3 = AccentColor and Library.Scheme.AccentColor or "OutlineColor",
                 BorderSizePixel = AccentColor and 0 or 1,
                 Position = UDim2.fromScale(1, 0.5),
-                Size = UDim2.new(0.5, -SizeX, 0, 2),
+                Size = UDim2.new(0.5, -SizeX, 0, 3.5),
                 Parent = InnerHolder,
             })
             if AccentColor then
