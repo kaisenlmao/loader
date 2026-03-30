@@ -3104,12 +3104,16 @@ do
                 BackgroundTransparency = 1,
                 Size = UDim2.fromScale(1, 0),
                 Text = Text,
-                TextColor3 = AccentColor and "AccentColor" or "FontColor",
                 TextSize = 14,
                 TextTransparency = AccentColor and 0 or 0.5,
                 TextXAlignment = Enum.TextXAlignment.Center,
                 Parent = InnerHolder,
             })
+
+            if AccentColor then
+                TextLabel.TextColor3 = Library.Scheme.AccentColor
+                Library.Registry[TextLabel].TextColor3 = "AccentColor"
+            end
 
             local X, _ = Library:GetTextBounds(Text, TextLabel.FontFace, TextLabel.TextSize, TextLabel.AbsoluteSize.X)
             local SizeX = X // 2 + 10
