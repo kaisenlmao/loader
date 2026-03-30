@@ -1544,6 +1544,10 @@ function Library:AddDraggableLabel(Text: string)
         Label.Visible = Visible
     end
 
+    function Table:Destroy()
+        Label:Destroy()
+    end
+
     return Table
 end
 
@@ -3062,11 +3066,13 @@ do
         local Text
         local MarginTop = 0
         local MarginBottom = 0
+        local AccentColor = false
 
         if typeof(Params) == "table" then
             Text = Params.Text
             MarginTop = Params.MarginTop or Params.Margin or 0
             MarginBottom = Params.MarginBottom or Params.Margin or 0
+            AccentColor = Params.AccentColor or false
         elseif typeof(Params) == "string" then
             Text = Params
         end
@@ -3098,8 +3104,9 @@ do
                 BackgroundTransparency = 1,
                 Size = UDim2.fromScale(1, 0),
                 Text = Text,
+                TextColor3 = AccentColor and "AccentColor" or "FontColor",
                 TextSize = 14,
-                TextTransparency = 0.5,
+                TextTransparency = AccentColor and 0 or 0.5,
                 TextXAlignment = Enum.TextXAlignment.Center,
                 Parent = InnerHolder,
             })
@@ -6485,7 +6492,7 @@ function Library:CreateWindow(WindowInfo)
             New("ImageLabel", {
                 AnchorPoint = Vector2.new(1, 0.5),
                 Image = MoveIcon.Url,
-                ImageColor3 = "OutlineColor",
+                ImageColor3 = "AccentColor",
                 ImageRectOffset = MoveIcon.ImageRectOffset,
                 ImageRectSize = MoveIcon.ImageRectSize,
                 Position = UDim2.new(1, -10, 0.5, 0),
@@ -8393,7 +8400,7 @@ do
         local ToggleBtnTexture = "rbxassetid://72530843154458"
         
         local ToggleBtnSize = 56   
-        local ToggleBtnIconSize = 41 
+        local ToggleBtnIconSize = 34 
 
         local ToggleBtnFrame = New("ImageButton", {
             AnchorPoint = Vector2.new(0.5, 0),
