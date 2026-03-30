@@ -3109,7 +3109,7 @@ do
                 Text = string.upper(Text),
                 TextSize = 13,
                 FontFace = BoldFont,
-                TextTransparency = AccentColor and 0 or 0.55,
+                TextTransparency = AccentColor and 0 or 0.7,
                 TextXAlignment = Enum.TextXAlignment.Center,
                 Parent = InnerHolder,
             })
