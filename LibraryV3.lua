@@ -3124,14 +3124,6 @@ do
                 Library.Registry[TextLabel].TextColor3 = "AccentColor"
 
                 
-                local GlowStroke = New("UIStroke", {
-                    Color = Library.Scheme.AccentColor,
-                    Transparency = 0.65,
-                    Thickness = 1,
-                    ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual,
-                    Parent = TextLabel,
-                })
-                Library.Registry[GlowStroke] = { Color = "AccentColor" }
             end
 
             local X, _ = Library:GetTextBounds(string.upper(Text), BoldFont, TextLabel.TextSize, TextLabel.AbsoluteSize.X)
