@@ -3109,7 +3109,7 @@ do
                 Text = string.upper(Text),
                 TextSize = 13,
                 FontFace = BoldFont,
-                TextTransparency = AccentColor and 0 or 0.7,
+                TextTransparency = AccentColor and 0 or 0.35,
                 TextXAlignment = Enum.TextXAlignment.Center,
                 Parent = InnerHolder,
             })
@@ -3122,8 +3122,6 @@ do
             if AccentColor then
                 TextLabel.TextColor3 = Library.Scheme.AccentColor
                 Library.Registry[TextLabel].TextColor3 = "AccentColor"
-
-                
             end
 
             local X, _ = Library:GetTextBounds(string.upper(Text), BoldFont, TextLabel.TextSize, TextLabel.AbsoluteSize.X)
@@ -3137,7 +3135,7 @@ do
                 BorderColor3 = AccentColor and Library.Scheme.AccentColor or "OutlineColor",
                 BorderSizePixel = AccentColor and 0 or 1,
                 Position = UDim2.fromScale(0, 0.5),
-                Size = UDim2.new(0.5, -SizeX, 0, 3.5),
+                Size = UDim2.new(0.5, -SizeX, 0, 2),
                 Parent = InnerHolder,
             })
             if AccentColor then
@@ -3152,7 +3150,7 @@ do
                 BorderColor3 = AccentColor and Library.Scheme.AccentColor or "OutlineColor",
                 BorderSizePixel = AccentColor and 0 or 1,
                 Position = UDim2.fromScale(1, 0.5),
-                Size = UDim2.new(0.5, -SizeX, 0, 3.5),
+                Size = UDim2.new(0.5, -SizeX, 0, 2),
                 Parent = InnerHolder,
             })
             if AccentColor then
@@ -6726,7 +6724,8 @@ function Library:CreateWindow(WindowInfo)
     end
 
     function Window:SetSidebarWidth(Width)
-        Width = math.clamp(Width, 48, MainFrame.Size.X.Offset - WindowInfo.MinContainerWidth - 1)
+        local maxAllowedWidth = math.max(48, MainFrame.Size.X.Offset - WindowInfo.MinContainerWidth - 1)
+        Width = math.clamp(Width, 48, maxAllowedWidth)
 
         DividerLine.Position = UDim2.fromOffset(Width, 0)
 
