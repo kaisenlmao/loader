@@ -2487,6 +2487,7 @@ do
         Info = Library:Validate(Info, Templates.KeyPicker)
 
         local ParentObj = self
+        local Groupbox = ParentObj.Groupbox
         local ToggleLabel = ParentObj.TextLabel
 
         local KeyPicker = {
@@ -2754,7 +2755,7 @@ do
 
         local MenuTable = Library:AddContextMenu(Picker, UDim2.fromOffset(62, 0), function()
             return { Picker.AbsoluteSize.X + 1.5, 0.5 }
-        end, 1, nil, Groupbox.IsDialog and 9010 or nil)
+        end, 1, nil, (Groupbox and Groupbox.IsDialog) and 9010 or nil)
         KeyPicker.Menu = MenuTable
 
         local ModeButtons = {}
@@ -3134,6 +3135,7 @@ do
         Info = Library:Validate(Info, Templates.ColorPicker)
 
         local ParentObj = self
+        local Groupbox = ParentObj.Groupbox
         local ToggleLabel = ParentObj.TextLabel
 
         local ColorPicker = {
@@ -3176,7 +3178,7 @@ do
             end,
             1,
             nil,
-            Groupbox.IsDialog and 9010 or nil
+            (Groupbox and Groupbox.IsDialog) and 9010 or nil
         )
         ColorMenu.List.Padding = UDim.new(0, 8)
         ColorPicker.ColorMenu = ColorMenu
@@ -3329,7 +3331,7 @@ do
         --// Context Menu \\--
         local ContextMenu = Library:AddContextMenu(Holder, UDim2.fromOffset(93, 0), function()
             return { Holder.AbsoluteSize.X + 1.5, 0.5 }
-        end, 1, nil, Groupbox.IsDialog and 9010 or nil)
+        end, 1, nil, (Groupbox and Groupbox.IsDialog) and 9010 or nil)
         ColorPicker.ContextMenu = ContextMenu
         do
             local function CreateButton(Text, Func)
@@ -3756,6 +3758,7 @@ do
 
         Label.TextLabel = TextLabel
         Label.Container = Container
+        Label.Groupbox = Groupbox
         if not Data.DoesWrap then
             setmetatable(Label, BaseAddons)
         end
@@ -4259,6 +4262,7 @@ do
 
         Toggle.TextLabel = Label
         Toggle.Container = Container
+        Toggle.Groupbox = Groupbox
         setmetatable(Toggle, BaseAddons)
 
         Toggle.Holder = Button
@@ -4482,6 +4486,7 @@ do
 
         Toggle.TextLabel = Label
         Toggle.Container = Container
+        Toggle.Groupbox = Groupbox
         setmetatable(Toggle, BaseAddons)
 
         Toggle.Holder = Button
