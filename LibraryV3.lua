@@ -595,12 +595,12 @@ local function CheckDepbox(Box, Search)
             local Visible = false
 
             --// Check if Search matches Element's Name and if Element is Visible
-            if ElementInfo.Text:lower():match(Search) and ElementInfo.Visible then
+            if string.find(ElementInfo.Text:lower(), Search, 1, true) and ElementInfo.Visible then
                 Visible = true
             else
                 ElementInfo.Base.Visible = false
             end
-            if ElementInfo.SubButton.Text:lower():match(Search) and ElementInfo.SubButton.Visible then
+            if string.find(ElementInfo.SubButton.Text:lower(), Search, 1, true) and ElementInfo.SubButton.Visible then
                 Visible = true
             else
                 ElementInfo.SubButton.Base.Visible = false
@@ -614,7 +614,7 @@ local function CheckDepbox(Box, Search)
         end
 
         --// Check if Search matches Element's Name and if Element is Visible
-        if ElementInfo.Text and ElementInfo.Text:lower():match(Search) and ElementInfo.Visible then
+        if ElementInfo.Text and string.find(ElementInfo.Text:lower(), Search, 1, true) and ElementInfo.Visible then
             ElementInfo.Holder.Visible = true
             VisibleElements += 1
         else
@@ -628,6 +628,74 @@ local function CheckDepbox(Box, Search)
         end
 
         VisibleElements += CheckDepbox(Depbox, Search)
+    end
+
+    if Box.InnerTabboxes then
+        for _, InnerTabbox in Box.InnerTabboxes do
+            local VisibleTabs = 0
+            local InnerVisibleElements = {}
+
+            for _, SubTab in InnerTabbox.Tabs do
+                InnerVisibleElements[SubTab] = 0
+
+                for _, ElementInfo in SubTab.Elements do
+                    if ElementInfo.Type == "Divider" then
+                        ElementInfo.Holder.Visible = false
+                        continue
+                    elseif ElementInfo.SubButton then
+                        local Visible = false
+
+                        if string.find(ElementInfo.Text:lower(), Search, 1, true) and ElementInfo.Visible then
+                            Visible = true
+                        else
+                            ElementInfo.Base.Visible = false
+                        end
+                        if string.find(ElementInfo.SubButton.Text:lower(), Search, 1, true) and ElementInfo.SubButton.Visible then
+                            Visible = true
+                        else
+                            ElementInfo.SubButton.Base.Visible = false
+                        end
+                        ElementInfo.Holder.Visible = Visible
+                        if Visible then
+                            InnerVisibleElements[SubTab] += 1
+                        end
+
+                        continue
+                    end
+
+                    if ElementInfo.Text and string.find(ElementInfo.Text:lower(), Search, 1, true) and ElementInfo.Visible then
+                        ElementInfo.Holder.Visible = true
+                        InnerVisibleElements[SubTab] += 1
+                    else
+                        ElementInfo.Holder.Visible = false
+                    end
+                end
+
+                for _, Depbox in SubTab.DependencyBoxes do
+                    if not Depbox.Visible then
+                        continue
+                    end
+
+                    InnerVisibleElements[SubTab] += CheckDepbox(Depbox, Search)
+                end
+            end
+
+            for SubTab, Visible in InnerVisibleElements do
+                SubTab.ButtonHolder.Visible = Visible > 0
+                if Visible > 0 then
+                    VisibleTabs += 1
+                    VisibleElements += Visible
+
+                    if InnerTabbox.ActiveTab == SubTab then
+                        SubTab:Resize()
+                    elseif InnerTabbox.ActiveTab and InnerVisibleElements[InnerTabbox.ActiveTab] == 0 then
+                        SubTab:Show()
+                    end
+                end
+            end
+
+            InnerTabbox.BoxHolder.Visible = VisibleTabs > 0
+        end
     end
 
     Box.Holder.Visible = VisibleElements > 0
@@ -653,6 +721,36 @@ local function RestoreDepbox(Box)
 
         RestoreDepbox(Depbox)
     end
+
+    if Box.InnerTabboxes then
+        for _, InnerTabbox in Box.InnerTabboxes do
+            for _, SubTab in InnerTabbox.Tabs do
+                for _, ElementInfo in SubTab.Elements do
+                    ElementInfo.Holder.Visible = typeof(ElementInfo.Visible) == "boolean" and ElementInfo.Visible or true
+
+                    if ElementInfo.SubButton then
+                        ElementInfo.Base.Visible = ElementInfo.Visible
+                        ElementInfo.SubButton.Base.Visible = ElementInfo.SubButton.Visible
+                    end
+                end
+
+                for _, Depbox in SubTab.DependencyBoxes do
+                    if not Depbox.Visible then
+                        continue
+                    end
+
+                    RestoreDepbox(Depbox)
+                end
+
+                SubTab.ButtonHolder.Visible = true
+            end
+
+            if InnerTabbox.ActiveTab then
+                InnerTabbox.ActiveTab:Resize()
+            end
+            InnerTabbox.BoxHolder.Visible = true
+        end
+    end
 end
 
 local function ApplySearchToTab(Tab, Search)
@@ -675,12 +773,12 @@ local function ApplySearchToTab(Tab, Search)
                 local Visible = false
 
                 --// Check if Search matches Element's Name and if Element is Visible
-                if ElementInfo.Text:lower():match(Search) and ElementInfo.Visible then
+                if string.find(ElementInfo.Text:lower(), Search, 1, true) and ElementInfo.Visible then
                     Visible = true
                 else
                     ElementInfo.Base.Visible = false
                 end
-                if ElementInfo.SubButton.Text:lower():match(Search) and ElementInfo.SubButton.Visible then
+                if string.find(ElementInfo.SubButton.Text:lower(), Search, 1, true) and ElementInfo.SubButton.Visible then
                     Visible = true
                 else
                     ElementInfo.SubButton.Base.Visible = false
@@ -694,7 +792,7 @@ local function ApplySearchToTab(Tab, Search)
             end
 
             --// Check if Search matches Element's Name and if Element is Visible
-            if ElementInfo.Text and ElementInfo.Text:lower():match(Search) and ElementInfo.Visible then
+            if ElementInfo.Text and string.find(ElementInfo.Text:lower(), Search, 1, true) and ElementInfo.Visible then
                 ElementInfo.Holder.Visible = true
                 VisibleElements += 1
             else
@@ -710,7 +808,72 @@ local function ApplySearchToTab(Tab, Search)
             VisibleElements += CheckDepbox(Depbox, Search)
         end
 
-        --// Update Groupbox Size and Visibility if found any element
+        for _, InnerTabbox in Groupbox.InnerTabboxes do
+            local VisibleTabs = 0
+            local InnerVisibleElements = {}
+
+            for _, SubTab in InnerTabbox.Tabs do
+                InnerVisibleElements[SubTab] = 0
+
+                for _, ElementInfo in SubTab.Elements do
+                    if ElementInfo.Type == "Divider" then
+                        ElementInfo.Holder.Visible = false
+                        continue
+                    elseif ElementInfo.SubButton then
+                        local Visible = false
+
+                        if string.find(ElementInfo.Text:lower(), Search, 1, true) and ElementInfo.Visible then
+                            Visible = true
+                        else
+                            ElementInfo.Base.Visible = false
+                        end
+                        if string.find(ElementInfo.SubButton.Text:lower(), Search, 1, true) and ElementInfo.SubButton.Visible then
+                            Visible = true
+                        else
+                            ElementInfo.SubButton.Base.Visible = false
+                        end
+                        ElementInfo.Holder.Visible = Visible
+                        if Visible then
+                            InnerVisibleElements[SubTab] += 1
+                        end
+
+                        continue
+                    end
+
+                    if ElementInfo.Text and string.find(ElementInfo.Text:lower(), Search, 1, true) and ElementInfo.Visible then
+                        ElementInfo.Holder.Visible = true
+                        InnerVisibleElements[SubTab] += 1
+                    else
+                        ElementInfo.Holder.Visible = false
+                    end
+                end
+
+                for _, Depbox in SubTab.DependencyBoxes do
+                    if not Depbox.Visible then
+                        continue
+                    end
+
+                    InnerVisibleElements[SubTab] += CheckDepbox(Depbox, Search)
+                end
+            end
+
+            for SubTab, Visible in InnerVisibleElements do
+                SubTab.ButtonHolder.Visible = Visible > 0
+                if Visible > 0 then
+                    VisibleTabs += 1
+                    VisibleElements += Visible
+
+                    if InnerTabbox.ActiveTab == SubTab then
+                        SubTab:Resize()
+                    elseif InnerTabbox.ActiveTab and InnerVisibleElements[InnerTabbox.ActiveTab] == 0 then
+                        SubTab:Show()
+                    end
+                end
+            end
+
+            InnerTabbox.BoxHolder.Visible = VisibleTabs > 0
+        end
+
         if VisibleElements > 0 then
             Groupbox:Resize()
             HasVisible = true
@@ -734,12 +897,12 @@ local function ApplySearchToTab(Tab, Search)
                     local Visible = false
 
                     --// Check if Search matches Element's Name and if Element is Visible
-                    if ElementInfo.Text:lower():match(Search) and ElementInfo.Visible then
+                    if string.find(ElementInfo.Text:lower(), Search, 1, true) and ElementInfo.Visible then
                         Visible = true
                     else
                         ElementInfo.Base.Visible = false
                     end
-                    if ElementInfo.SubButton.Text:lower():match(Search) and ElementInfo.SubButton.Visible then
+                    if string.find(ElementInfo.SubButton.Text:lower(), Search, 1, true) and ElementInfo.SubButton.Visible then
                         Visible = true
                     else
                         ElementInfo.SubButton.Base.Visible = false
@@ -753,7 +916,7 @@ local function ApplySearchToTab(Tab, Search)
                 end
 
                 --// Check if Search matches Element's Name and if Element is Visible
-                if ElementInfo.Text and ElementInfo.Text:lower():match(Search) and ElementInfo.Visible then
+                if ElementInfo.Text and string.find(ElementInfo.Text:lower(), Search, 1, true) and ElementInfo.Visible then
                     ElementInfo.Holder.Visible = true
                     VisibleElements[SubTab] += 1
                 else
@@ -767,6 +930,72 @@ local function ApplySearchToTab(Tab, Search)
                 end
 
                 VisibleElements[SubTab] += CheckDepbox(Depbox, Search)
+            end
+
+            for _, InnerTabbox in SubTab.InnerTabboxes do
+                local InnerVisibleTabs = 0
+                local InnerVisibleElements = {}
+
+                for _, InnerSubTab in InnerTabbox.Tabs do
+                    InnerVisibleElements[InnerSubTab] = 0
+
+                    for _, ElementInfo in InnerSubTab.Elements do
+                        if ElementInfo.Type == "Divider" then
+                            ElementInfo.Holder.Visible = false
+                            continue
+                        elseif ElementInfo.SubButton then
+                            local Visible = false
+
+                            if string.find(ElementInfo.Text:lower(), Search, 1, true) and ElementInfo.Visible then
+                                Visible = true
+                            else
+                                ElementInfo.Base.Visible = false
+                            end
+                            if string.find(ElementInfo.SubButton.Text:lower(), Search, 1, true) and ElementInfo.SubButton.Visible then
+                                Visible = true
+                            else
+                                ElementInfo.SubButton.Base.Visible = false
+                            end
+                            ElementInfo.Holder.Visible = Visible
+                            if Visible then
+                                InnerVisibleElements[InnerSubTab] += 1
+                            end
+
+                            continue
+                        end
+
+                        if ElementInfo.Text and string.find(ElementInfo.Text:lower(), Search, 1, true) and ElementInfo.Visible then
+                            ElementInfo.Holder.Visible = true
+                            InnerVisibleElements[InnerSubTab] += 1
+                        else
+                            ElementInfo.Holder.Visible = false
+                        end
+                    end
+
+                    for _, Depbox in InnerSubTab.DependencyBoxes do
+                        if not Depbox.Visible then
+                            continue
+                        end
+
+                        InnerVisibleElements[InnerSubTab] += CheckDepbox(Depbox, Search)
+                    end
+                end
+
+                for InnerSubTab, Visible in InnerVisibleElements do
+                    InnerSubTab.ButtonHolder.Visible = Visible > 0
+                    if Visible > 0 then
+                        InnerVisibleTabs += 1
+                        VisibleElements[SubTab] += Visible
+
+                        if InnerTabbox.ActiveTab == InnerSubTab then
+                            InnerSubTab:Resize()
+                        elseif InnerTabbox.ActiveTab and InnerVisibleElements[InnerTabbox.ActiveTab] == 0 then
+                            InnerSubTab:Show()
+                        end
+                    end
+                end
+
+                InnerTabbox.BoxHolder.Visible = InnerVisibleTabs > 0
             end
         end
 
@@ -786,6 +1015,127 @@ local function ApplySearchToTab(Tab, Search)
 
         --// Update Tabbox Visibility if any visible
         Tabbox.BoxHolder.Visible = VisibleTabs > 0
+    end
+
+    for _, DepGroupbox in Tab.DependencyGroupboxes do
+        if not DepGroupbox.Visible then
+            continue
+        end
+
+        local VisibleElements = 0
+
+        for _, ElementInfo in DepGroupbox.Elements do
+            if ElementInfo.Type == "Divider" then
+                ElementInfo.Holder.Visible = false
+                continue
+            elseif ElementInfo.SubButton then
+                local Visible = false
+
+                if string.find(ElementInfo.Text:lower(), Search, 1, true) and ElementInfo.Visible then
+                    Visible = true
+                else
+                    ElementInfo.Base.Visible = false
+                end
+                if string.find(ElementInfo.SubButton.Text:lower(), Search, 1, true) and ElementInfo.SubButton.Visible then
+                    Visible = true
+                else
+                    ElementInfo.SubButton.Base.Visible = false
+                end
+                ElementInfo.Holder.Visible = Visible
+                if Visible then
+                    VisibleElements += 1
+                end
+
+                continue
+            end
+
+            if ElementInfo.Text and string.find(ElementInfo.Text:lower(), Search, 1, true) and ElementInfo.Visible then
+                ElementInfo.Holder.Visible = true
+                VisibleElements += 1
+            else
+                ElementInfo.Holder.Visible = false
+            end
+        end
+
+        for _, Depbox in DepGroupbox.DependencyBoxes do
+            if not Depbox.Visible then
+                continue
+            end
+
+            VisibleElements += CheckDepbox(Depbox, Search)
+        end
+
+        for _, InnerTabbox in DepGroupbox.InnerTabboxes do
+            local VisibleTabs = 0
+            local InnerVisibleElements = {}
+
+            for _, SubTab in InnerTabbox.Tabs do
+                InnerVisibleElements[SubTab] = 0
+
+                for _, ElementInfo in SubTab.Elements do
+                    if ElementInfo.Type == "Divider" then
+                        ElementInfo.Holder.Visible = false
+                        continue
+                    elseif ElementInfo.SubButton then
+                        local Visible = false
+
+                        if string.find(ElementInfo.Text:lower(), Search, 1, true) and ElementInfo.Visible then
+                            Visible = true
+                        else
+                            ElementInfo.Base.Visible = false
+                        end
+                        if string.find(ElementInfo.SubButton.Text:lower(), Search, 1, true) and ElementInfo.SubButton.Visible then
+                            Visible = true
+                        else
+                            ElementInfo.SubButton.Base.Visible = false
+                        end
+                        ElementInfo.Holder.Visible = Visible
+                        if Visible then
+                            InnerVisibleElements[SubTab] += 1
+                        end
+
+                        continue
+                    end
+
+                    if ElementInfo.Text and string.find(ElementInfo.Text:lower(), Search, 1, true) and ElementInfo.Visible then
+                        ElementInfo.Holder.Visible = true
+                        InnerVisibleElements[SubTab] += 1
+                    else
+                        ElementInfo.Holder.Visible = false
+                    end
+                end
+
+                for _, Depbox in SubTab.DependencyBoxes do
+                    if not Depbox.Visible then
+                        continue
+                    end
+
+                    InnerVisibleElements[SubTab] += CheckDepbox(Depbox, Search)
+                end
+            end
+
+            for SubTab, Visible in InnerVisibleElements do
+                SubTab.ButtonHolder.Visible = Visible > 0
+                if Visible > 0 then
+                    VisibleTabs += 1
+                    VisibleElements += Visible
+
+                    if InnerTabbox.ActiveTab == SubTab then
+                        SubTab:Resize()
+                    elseif InnerTabbox.ActiveTab and InnerVisibleElements[InnerTabbox.ActiveTab] == 0 then
+                        SubTab:Show()
+                    end
+                end
+            end
+
+            InnerTabbox.BoxHolder.Visible = VisibleTabs > 0
+        end
+
+        if VisibleElements > 0 then
+            DepGroupbox:Resize()
+            HasVisible = true
+        end
+        DepGroupbox.Holder.Visible = VisibleElements > 0
     end
 
     return HasVisible
@@ -813,6 +1163,34 @@ local function ResetTab(Tab)
             RestoreDepbox(Depbox)
         end
 
+        for _, InnerTabbox in Groupbox.InnerTabboxes do
+            for _, SubTab in InnerTabbox.Tabs do
+                for _, ElementInfo in SubTab.Elements do
+                    ElementInfo.Holder.Visible = typeof(ElementInfo.Visible) == "boolean" and ElementInfo.Visible or true
+
+                    if ElementInfo.SubButton then
+                        ElementInfo.Base.Visible = ElementInfo.Visible
+                        ElementInfo.SubButton.Base.Visible = ElementInfo.SubButton.Visible
+                    end
+                end
+
+                for _, Depbox in SubTab.DependencyBoxes do
+                    if not Depbox.Visible then
+                        continue
+                    end
+
+                    RestoreDepbox(Depbox)
+                end
+
+                SubTab.ButtonHolder.Visible = true
+            end
+
+            if InnerTabbox.ActiveTab then
+                InnerTabbox.ActiveTab:Resize()
+            end
+            InnerTabbox.BoxHolder.Visible = true
+        end
+
         Groupbox:Resize()
         Groupbox.BoxHolder.Visible = true
     end
@@ -836,6 +1214,34 @@ local function ResetTab(Tab)
                 RestoreDepbox(Depbox)
             end
 
+            for _, InnerTabbox in SubTab.InnerTabboxes do
+                for _, InnerSubTab in InnerTabbox.Tabs do
+                    for _, ElementInfo in InnerSubTab.Elements do
+                        ElementInfo.Holder.Visible = typeof(ElementInfo.Visible) == "boolean" and ElementInfo.Visible or true
+
+                        if ElementInfo.SubButton then
+                            ElementInfo.Base.Visible = ElementInfo.Visible
+                            ElementInfo.SubButton.Base.Visible = ElementInfo.SubButton.Visible
+                        end
+                    end
+
+                    for _, Depbox in InnerSubTab.DependencyBoxes do
+                        if not Depbox.Visible then
+                            continue
+                        end
+
+                        RestoreDepbox(Depbox)
+                    end
+
+                    InnerSubTab.ButtonHolder.Visible = true
+                end
+
+                if InnerTabbox.ActiveTab then
+                    InnerTabbox.ActiveTab:Resize()
+                end
+                InnerTabbox.BoxHolder.Visible = true
+            end
+
             SubTab.ButtonHolder.Visible = true
         end
 
@@ -843,6 +1249,60 @@ local function ResetTab(Tab)
             Tabbox.ActiveTab:Resize()
         end
         Tabbox.BoxHolder.Visible = true
+    end
+
+    for _, DepGroupbox in Tab.DependencyGroupboxes do
+        if not DepGroupbox.Visible then
+            continue
+        end
+
+        for _, ElementInfo in DepGroupbox.Elements do
+            ElementInfo.Holder.Visible = typeof(ElementInfo.Visible) == "boolean" and ElementInfo.Visible or true
+
+            if ElementInfo.SubButton then
+                ElementInfo.Base.Visible = ElementInfo.Visible
+                ElementInfo.SubButton.Base.Visible = ElementInfo.SubButton.Visible
+            end
+        end
+
+        for _, Depbox in DepGroupbox.DependencyBoxes do
+            if not Depbox.Visible then
+                continue
+            end
+
+            RestoreDepbox(Depbox)
+        end
+
+        for _, InnerTabbox in DepGroupbox.InnerTabboxes do
+            for _, SubTab in InnerTabbox.Tabs do
+                for _, ElementInfo in SubTab.Elements do
+                    ElementInfo.Holder.Visible = typeof(ElementInfo.Visible) == "boolean" and ElementInfo.Visible or true
+
+                    if ElementInfo.SubButton then
+                        ElementInfo.Base.Visible = ElementInfo.Visible
+                        ElementInfo.SubButton.Base.Visible = ElementInfo.SubButton.Visible
+                    end
+                end
+
+                for _, Depbox in SubTab.DependencyBoxes do
+                    if not Depbox.Visible then
+                        continue
+                    end
+
+                    RestoreDepbox(Depbox)
+                end
+
+                SubTab.ButtonHolder.Visible = true
+            end
+
+            if InnerTabbox.ActiveTab then
+                InnerTabbox.ActiveTab:Resize()
+            end
+            InnerTabbox.BoxHolder.Visible = true
+        end
+
+        DepGroupbox:Resize()
+        DepGroupbox.Holder.Visible = true
     end
 end
 
@@ -861,7 +1321,7 @@ function Library:UpdateSearch(SearchText)
         table.insert(TabsToReset, Library.LastSearchTab)
     end
 
-    for _, Tab in ipairs(TabsToReset) do
+    for _, Tab in TabsToReset do
         ResetTab(Tab)
     end
 
@@ -897,7 +1357,7 @@ function Library:UpdateSearch(SearchText)
     local FirstVisibleTab = nil
     local ActiveHasVisible = false
 
-    for _, Tab in ipairs(TabsToSearch) do
+    for _, Tab in TabsToSearch do
         local HasVisible = ApplySearchToTab(Tab, Search)
         if HasVisible then
             if not FirstVisibleTab then
@@ -4635,7 +5095,7 @@ do
 
             local Count = 0
             for _, Value in Values do
-                if SearchBox and not tostring(Value):lower():match(SearchBox.Text:lower()) then
+                if SearchBox and not string.find(tostring(Value):lower(), SearchBox.Text:lower(), 1, true) then
                     continue
                 end
 
@@ -5512,6 +5972,7 @@ do
 
             Elements = {},
             DependencyBoxes = {},
+            InnerTabboxes = {},
         }
 
         function Depbox:Resize()
@@ -5635,6 +6096,7 @@ do
             Tab = Tab,
             Elements = {},
             DependencyBoxes = {},
+            InnerTabboxes = {},
         }
 
         function DepGroupbox:Resize()
@@ -5737,7 +6199,10 @@ do
             ActiveTab = nil,
             Tabs = {},
             Groupbox = Groupbox,
+            BoxHolder = TabboxWrapper,
         }
+
+        table.insert(Groupbox.InnerTabboxes, InnerTabbox)
 
         local TotalButtons = 0
         local InnerTabTweenInfo = TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
@@ -5814,6 +6279,7 @@ do
                 Tab = Groupbox.Tab or Groupbox,
                 Elements = {},
                 DependencyBoxes = {},
+                InnerTabboxes = {},
             }
 
             function Tab:Show()
@@ -7219,6 +7685,7 @@ function Library:CreateWindow(WindowInfo)
                 Tab = Tab,
                 DependencyBoxes = {},
                 Elements = {},
+                InnerTabboxes = {},
             }
 
             function Groupbox:Resize()
@@ -7414,6 +7881,7 @@ function Library:CreateWindow(WindowInfo)
                     Tab = Tab,
                     Elements = {},
                     DependencyBoxes = {},
+                    InnerTabboxes = {},
                 }
 
                 function Tab:Show()
