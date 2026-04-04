@@ -6016,7 +6016,6 @@ do
                 Text = List.Text,
                 TextSize = 14,
                 TextXAlignment = Enum.TextXAlignment.Left,
-                TextColor3 = "FontColor",
                 LayoutOrder = 1,
                 Parent = Holder,
             })
@@ -6061,7 +6060,6 @@ do
             Size = UDim2.new(1, 0, 0, 30),
             Text = List.EmptyText,
             TextSize = 13,
-            TextColor3 = "FontColor",
             TextTransparency = 0.5,
             TextXAlignment = Enum.TextXAlignment.Center,
             Visible = true,
