@@ -2161,8 +2161,10 @@ function Library:AddContextMenu(
     Size: UDim2 | () -> (),
     Offset: { [number]: number } | () -> {},
     List: number?,
-    ActiveCallback: (Active: boolean) -> ()?
+    ActiveCallback: (Active: boolean) -> ()?,
+    MenuZIndex: number?
 )
+    local MenuZ = MenuZIndex or 10
     local Menu
     if List then
         Menu = New("ScrollingFrame", {
@@ -2178,7 +2180,7 @@ function Library:AddContextMenu(
             Size = typeof(Size) == "function" and Size() or Size,
             TopImage = "rbxasset://textures/ui/Scroll/scroll-middle.png",
             Visible = false,
-            ZIndex = 10,
+            ZIndex = MenuZ,
             Parent = ScreenGui,
         })
     else
@@ -2188,7 +2190,7 @@ function Library:AddContextMenu(
             BorderSizePixel = 1,
             Size = typeof(Size) == "function" and Size() or Size,
             Visible = false,
-            ZIndex = 10,
+            ZIndex = MenuZ,
             Parent = ScreenGui,
         })
     end
@@ -2752,7 +2754,7 @@ do
 
         local MenuTable = Library:AddContextMenu(Picker, UDim2.fromOffset(62, 0), function()
             return { Picker.AbsoluteSize.X + 1.5, 0.5 }
-        end, 1)
+        end, 1, nil, Groupbox.IsDialog and 9010 or nil)
         KeyPicker.Menu = MenuTable
 
         local ModeButtons = {}
@@ -3172,7 +3174,9 @@ do
             function()
                 return { 0.5, Holder.AbsoluteSize.Y + 1.5 }
             end,
-            1
+            1,
+            nil,
+            Groupbox.IsDialog and 9010 or nil
         )
         ColorMenu.List.Padding = UDim.new(0, 8)
         ColorPicker.ColorMenu = ColorMenu
@@ -3325,7 +3329,7 @@ do
         --// Context Menu \\--
         local ContextMenu = Library:AddContextMenu(Holder, UDim2.fromOffset(93, 0), function()
             return { Holder.AbsoluteSize.X + 1.5, 0.5 }
-        end, 1)
+        end, 1, nil, Groupbox.IsDialog and 9010 or nil)
         ColorPicker.ContextMenu = ContextMenu
         do
             local function CreateButton(Text, Func)
@@ -5035,7 +5039,8 @@ do
                     SearchBox.Text = ""
                     SearchBox.Visible = Active
                 end
-            end
+            end,
+            Groupbox.IsDialog and 9010 or nil
         )
         Dropdown.Menu = MenuTable
 
@@ -8900,6 +8905,7 @@ function Library:CreateWindow(WindowInfo)
             Elements = {},
             Container = DialogContainer,
             Visible = true,
+            IsDialog = true,
         }
 
         function Dialog:Resize()
