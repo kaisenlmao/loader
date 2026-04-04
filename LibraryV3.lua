@@ -319,8 +319,25 @@ local Templates = {
         Title = "Dialog",
         Description = "Description",
         AutoDismiss = true,
+        AutoDestroy = false,
         OutsideClickDismiss = true,
-        FooterButtons = {}
+        FooterButtons = {},
+        OnShow = nil,
+        OnDismiss = nil,
+        OnDestroy = nil,
+        Width = nil,
+        MaxHeight = nil,
+    },
+    List = {
+        Text = nil,
+        Items = {},
+        Multi = false,
+        MaxHeight = 150,
+        EmptyText = "No items",
+        Callback = function() end,
+        Changed = function() end,
+        Disabled = false,
+        Visible = true,
     },
     Toggle = {
         Text = "Toggle",
@@ -3100,6 +3117,7 @@ do
 
         KeyPicker.Default = KeyPicker.Value
         KeyPicker.DefaultModifiers = table.clone(KeyPicker.Modifiers or {})
+        KeyPicker.Idx = Idx
 
         Options[Idx] = KeyPicker
 
@@ -3505,6 +3523,7 @@ do
         end
 
         ColorPicker.Default = ColorPicker.Value
+        ColorPicker.Idx = Idx
 
         Options[Idx] = ColorPicker
 
@@ -4242,6 +4261,7 @@ do
         table.insert(Groupbox.Elements, Toggle)
 
         Toggle.Default = Toggle.Value
+        Toggle.Idx = Idx
 
         Toggles[Idx] = Toggle
 
@@ -4464,6 +4484,7 @@ do
         table.insert(Groupbox.Elements, Toggle)
 
         Toggle.Default = Toggle.Value
+        Toggle.Idx = Idx
 
         Toggles[Idx] = Toggle
 
@@ -4628,6 +4649,7 @@ do
         table.insert(Groupbox.Elements, Input)
 
         Input.Default = Input.Value
+        Input.Idx = Idx
 
         Options[Idx] = Input
 
@@ -4885,6 +4907,7 @@ do
         table.insert(Groupbox.Elements, Slider)
 
         Slider.Default = Slider.Value
+        Slider.Idx = Idx
 
         Options[Idx] = Slider
 
@@ -5330,6 +5353,7 @@ do
 
         Dropdown.Default = Defaults
         Dropdown.DefaultValues = Dropdown.Values
+        Dropdown.Idx = Idx
 
         Options[Idx] = Dropdown
 
@@ -5603,6 +5627,7 @@ do
         Groupbox:Resize()
 
         Viewport.Holder = Holder
+        Viewport.Idx = Idx
         table.insert(Groupbox.Elements, Viewport)
 
         Options[Idx] = Viewport
@@ -5748,6 +5773,7 @@ do
         Groupbox:Resize()
 
         Image.Holder = Holder
+        Image.Idx = Idx
         table.insert(Groupbox.Elements, Image)
 
         Options[Idx] = Image
@@ -5865,6 +5891,7 @@ do
 
         Video.Holder = Holder
         Video.VideoFrame = VideoFrameInstance
+        Video.Idx = Idx
         table.insert(Groupbox.Elements, Video)
 
         Options[Idx] = Video
@@ -5935,11 +5962,371 @@ do
         end
 
         Passthrough.Holder = Holder
+        Passthrough.Idx = Idx
         table.insert(Groupbox.Elements, Passthrough)
 
         Options[Idx] = Passthrough
 
         return Passthrough
+    end
+
+    function Funcs:AddList(Idx, Info)
+        Info = Library:Validate(Info, Templates.List)
+
+        local Groupbox = self
+        local Container = Groupbox.Container
+
+        local List = {
+            Text = typeof(Info.Text) == "string" and Info.Text or nil,
+            Value = Info.Multi and {} or nil,
+            Items = {},
+            Multi = Info.Multi,
+            MaxHeight = Info.MaxHeight,
+            EmptyText = Info.EmptyText,
+
+            Callback = Info.Callback,
+            Changed = Info.Changed,
+
+            Disabled = Info.Disabled,
+            Visible = Info.Visible,
+
+            Type = "List",
+            Idx = Idx,
+        }
+
+        local ItemRows = {}
+
+        local Holder = New("Frame", {
+            BackgroundTransparency = 1,
+            Size = UDim2.new(1, 0, 0, 0),
+            AutomaticSize = Enum.AutomaticSize.Y,
+            Visible = List.Visible,
+            Parent = Container,
+        })
+        New("UIListLayout", {
+            Padding = UDim.new(0, 4),
+            SortOrder = Enum.SortOrder.LayoutOrder,
+            Parent = Holder,
+        })
+
+        if List.Text then
+            New("TextLabel", {
+                BackgroundTransparency = 1,
+                Size = UDim2.new(1, 0, 0, 15),
+                Text = List.Text,
+                TextSize = 14,
+                TextXAlignment = Enum.TextXAlignment.Left,
+                TextColor3 = "FontColor",
+                LayoutOrder = 1,
+                Parent = Holder,
+            })
+        end
+
+        local ListFrame = New("ScrollingFrame", {
+            BackgroundColor3 = "MainColor",
+            BackgroundTransparency = 0,
+            BorderSizePixel = 0,
+            Size = UDim2.new(1, 0, 0, Info.MaxHeight),
+            CanvasSize = UDim2.new(0, 0, 0, 0),
+            AutomaticCanvasSize = Enum.AutomaticSize.Y,
+            ScrollBarThickness = 4,
+            ScrollBarImageColor3 = "AccentColor",
+            ScrollingDirection = Enum.ScrollingDirection.Y,
+            LayoutOrder = 2,
+            Parent = Holder,
+        })
+        table.insert(
+            Library.Corners,
+            New("UICorner", {
+                CornerRadius = UDim.new(0, Library.CornerRadius),
+                Parent = ListFrame,
+            })
+        )
+        Library:AddOutline(ListFrame)
+        local _ListLayout = New("UIListLayout", {
+            Padding = UDim.new(0, 1),
+            SortOrder = Enum.SortOrder.LayoutOrder,
+            Parent = ListFrame,
+        })
+        New("UIPadding", {
+            PaddingTop = UDim.new(0, 2),
+            PaddingBottom = UDim.new(0, 2),
+            PaddingLeft = UDim.new(0, 2),
+            PaddingRight = UDim.new(0, 2),
+            Parent = ListFrame,
+        })
+
+        local EmptyLabel = New("TextLabel", {
+            BackgroundTransparency = 1,
+            Size = UDim2.new(1, 0, 0, 30),
+            Text = List.EmptyText,
+            TextSize = 13,
+            TextColor3 = "FontColor",
+            TextTransparency = 0.5,
+            TextXAlignment = Enum.TextXAlignment.Center,
+            Visible = true,
+            Parent = ListFrame,
+        })
+
+        local function NormalizeItems(items)
+            local normalized = {}
+            for i, item in items do
+                if typeof(item) == "string" then
+                    table.insert(normalized, { Key = i, Display = item })
+                elseif typeof(item) == "table" then
+                    table.insert(normalized, { Key = item.Key or i, Display = item.Display or tostring(item.Key or i) })
+                end
+            end
+            return normalized
+        end
+
+        local function IsSelected(key)
+            if List.Multi then
+                return List.Value and List.Value[key] == true
+            else
+                return List.Value == key
+            end
+        end
+
+        local function UpdateRowHighlight(key)
+            local row = ItemRows[key]
+            if not row then return end
+            local selected = IsSelected(key)
+            local TargetBg = selected and Library.Scheme.AccentColor or Library.Scheme.MainColor
+            local TargetText = selected and Library.Scheme.BackgroundColor or Library.Scheme.FontColor
+            TweenService:Create(row.Button, Library.TweenInfo, { BackgroundColor3 = TargetBg }):Play()
+            TweenService:Create(row.Label, Library.TweenInfo, { TextColor3 = TargetText }):Play()
+        end
+
+        local function SelectItem(key)
+            if List.Disabled then return end
+            if List.Multi then
+                if not List.Value then List.Value = {} end
+                if List.Value[key] then
+                    List.Value[key] = nil
+                else
+                    List.Value[key] = true
+                end
+                UpdateRowHighlight(key)
+            else
+                local prevKey = List.Value
+                List.Value = key
+                if prevKey ~= nil and ItemRows[prevKey] then
+                    UpdateRowHighlight(prevKey)
+                end
+                UpdateRowHighlight(key)
+            end
+
+            local selectedItem = nil
+            local selectedIndex = nil
+            for i, item in List.Items do
+                if item.Key == key then
+                    selectedItem = item
+                    selectedIndex = i
+                    break
+                end
+            end
+
+            Library:SafeCallback(List.Callback, selectedItem, selectedIndex)
+            Library:SafeCallback(List.Changed, List.Value)
+        end
+
+        local function RenderItems()
+            for _, row in ItemRows do
+                row.Button:Destroy()
+            end
+            table.clear(ItemRows)
+
+            EmptyLabel.Visible = #List.Items == 0
+            EmptyLabel.Text = List.EmptyText
+
+            for i, item in List.Items do
+                local selected = IsSelected(item.Key)
+                local BgColor = selected and Library.Scheme.AccentColor or Library.Scheme.MainColor
+                local TxtColor = selected and Library.Scheme.BackgroundColor or Library.Scheme.FontColor
+
+                local RowBtn = New("TextButton", {
+                    BackgroundColor3 = BgColor,
+                    BackgroundTransparency = 0,
+                    BorderSizePixel = 0,
+                    Size = UDim2.new(1, 0, 0, 26),
+                    Text = "",
+                    AutoButtonColor = false,
+                    LayoutOrder = i,
+                    Parent = ListFrame,
+                })
+                table.insert(
+                    Library.Corners,
+                    New("UICorner", {
+                        CornerRadius = UDim.new(0, math.max(Library.CornerRadius - 1, 2)),
+                        Parent = RowBtn,
+                    })
+                )
+
+                local RowLabel = New("TextLabel", {
+                    BackgroundTransparency = 1,
+                    Size = UDim2.new(1, -12, 1, 0),
+                    Position = UDim2.fromOffset(8, 0),
+                    Text = item.Display,
+                    TextSize = 13,
+                    TextColor3 = TxtColor,
+                    TextXAlignment = Enum.TextXAlignment.Left,
+                    TextTruncate = Enum.TextTruncate.AtEnd,
+                    Parent = RowBtn,
+                })
+
+                local HoverColor = Library:GetBetterColor(BgColor, 10)
+
+                RowBtn.MouseEnter:Connect(function()
+                    if List.Disabled then return end
+                    local currentSelected = IsSelected(item.Key)
+                    local baseBg = currentSelected and Library.Scheme.AccentColor or Library.Scheme.MainColor
+                    TweenService:Create(RowBtn, Library.TweenInfo, {
+                        BackgroundColor3 = Library:GetBetterColor(baseBg, 10)
+                    }):Play()
+                end)
+                RowBtn.MouseLeave:Connect(function()
+                    if List.Disabled then return end
+                    local currentSelected = IsSelected(item.Key)
+                    local baseBg = currentSelected and Library.Scheme.AccentColor or Library.Scheme.MainColor
+                    TweenService:Create(RowBtn, Library.TweenInfo, {
+                        BackgroundColor3 = baseBg
+                    }):Play()
+                end)
+
+                RowBtn.MouseButton1Click:Connect(function()
+                    SelectItem(item.Key)
+                end)
+
+                ItemRows[item.Key] = { Button = RowBtn, Label = RowLabel }
+            end
+        end
+
+        function List:SetItems(items)
+            List.Items = NormalizeItems(items)
+            if List.Multi then
+                List.Value = {}
+            else
+                List.Value = nil
+            end
+            RenderItems()
+        end
+
+        function List:AddItem(item)
+            local normalized
+            if typeof(item) == "string" then
+                normalized = { Key = #List.Items + 1, Display = item }
+            elseif typeof(item) == "table" then
+                normalized = { Key = item.Key or (#List.Items + 1), Display = item.Display or tostring(item.Key or (#List.Items + 1)) }
+            end
+            if normalized then
+                table.insert(List.Items, normalized)
+                RenderItems()
+            end
+        end
+
+        function List:RemoveItem(keyOrIndex)
+            for i, item in List.Items do
+                if item.Key == keyOrIndex or i == keyOrIndex then
+                    if List.Multi then
+                        if List.Value then List.Value[item.Key] = nil end
+                    elseif List.Value == item.Key then
+                        List.Value = nil
+                    end
+                    table.remove(List.Items, i)
+                    RenderItems()
+                    return true
+                end
+            end
+            return false
+        end
+
+        function List:GetSelected()
+            if List.Multi then
+                local selected = {}
+                if List.Value then
+                    for _, item in List.Items do
+                        if List.Value[item.Key] then
+                            table.insert(selected, item)
+                        end
+                    end
+                end
+                return selected
+            else
+                for _, item in List.Items do
+                    if item.Key == List.Value then
+                        return item
+                    end
+                end
+                return nil
+            end
+        end
+
+        function List:SetSelected(keyOrIndex)
+            if List.Multi then
+                if typeof(keyOrIndex) == "table" then
+                    List.Value = {}
+                    for _, key in keyOrIndex do
+                        List.Value[key] = true
+                    end
+                else
+                    if not List.Value then List.Value = {} end
+                    List.Value[keyOrIndex] = true
+                end
+            else
+                List.Value = keyOrIndex
+            end
+            RenderItems()
+        end
+
+        function List:ClearSelection()
+            if List.Multi then
+                List.Value = {}
+            else
+                List.Value = nil
+            end
+            RenderItems()
+        end
+
+        function List:GetItems()
+            return List.Items
+        end
+
+        function List:SetText(text)
+            List.Text = text
+            for _, child in Holder:GetChildren() do
+                if child:IsA("TextLabel") and child.LayoutOrder == 1 then
+                    child.Text = text
+                    break
+                end
+            end
+        end
+
+        function List:SetVisible(visible)
+            List.Visible = visible
+            Holder.Visible = visible
+            Groupbox:Resize()
+        end
+
+        function List:SetDisabled(disabled)
+            List.Disabled = disabled
+            ListFrame.ScrollBarImageTransparency = disabled and 0.5 or 0
+        end
+
+        function List:OnChanged(callback)
+            List.Changed = callback
+        end
+
+        -- Initialize with provided items
+        List.Items = NormalizeItems(Info.Items)
+        RenderItems()
+
+        List.Holder = Holder
+        table.insert(Groupbox.Elements, List)
+
+        Options[Idx] = List
+
+        return List
     end
 
     function Funcs:AddDependencyBox()
@@ -8443,6 +8830,8 @@ function Library:CreateWindow(WindowInfo)
             DescriptionLabel.TextColor3 = Info.DescriptionColor
         end
 
+        local ScrollWrapper = nil
+
         DialogContainer = New("Frame", {
             BackgroundTransparency = 1,
             Size = UDim2.fromScale(1, 0),
@@ -8460,6 +8849,23 @@ function Library:CreateWindow(WindowInfo)
             PaddingBottom = UDim.new(0, 5),
             Parent = DialogContainer,
         })
+
+        if Info.MaxHeight then
+            ScrollWrapper = New("ScrollingFrame", {
+                BackgroundTransparency = 1,
+                Size = UDim2.new(1, 0, 0, Info.MaxHeight),
+                CanvasSize = UDim2.new(0, 0, 0, 0),
+                AutomaticCanvasSize = Enum.AutomaticSize.Y,
+                ScrollBarThickness = 4,
+                ScrollBarImageColor3 = "AccentColor",
+                ScrollingDirection = Enum.ScrollingDirection.Y,
+                LayoutOrder = 4,
+                ZIndex = 9002,
+                Parent = InnerContainer,
+            })
+            DialogContainer.Parent = ScrollWrapper
+            DialogContainer.LayoutOrder = 0
+        end
         
         local _Sep2 = New("Frame", {
             BackgroundColor3 = "OutlineColor",
@@ -8495,11 +8901,12 @@ function Library:CreateWindow(WindowInfo)
         local Dialog = {
             Elements = {},
             Container = DialogContainer,
+            Visible = true,
         }
 
         function Dialog:Resize()
             local MaxWidth = MainFrame.AbsoluteSize.X * 0.75
-            local MinWidth = 400
+            local MinWidth = Info.Width or 400
 
             local TotalButtonWidth = 0
             local ButtonCount = 0
@@ -8512,7 +8919,9 @@ function Library:CreateWindow(WindowInfo)
             end
 
             local TargetWidth = MinWidth
-            if HasButtons then
+            if Info.Width then
+                TargetWidth = math.min(Info.Width, MaxWidth)
+            elseif HasButtons then
                 local RequiredWidth = TotalButtonWidth + ((ButtonCount - 1) * 8) + 30
                 TargetWidth = math.max(MinWidth, math.min(RequiredWidth, MaxWidth))
             end
@@ -8545,16 +8954,113 @@ function Library:CreateWindow(WindowInfo)
             Dialog:Resize()
         end
 
+        function Dialog:SetSize(width, maxHeight)
+            if width then
+                Info.Width = width
+            end
+            if maxHeight and ScrollWrapper then
+                ScrollWrapper.Size = UDim2.new(1, 0, 0, maxHeight)
+            end
+            Dialog:Resize()
+        end
+
         function Dialog:Dismiss()
+            if not Dialog.Visible then return end
+            Dialog.Visible = false
             Library.ActiveDialog = nil
+
             local CloseTween = TweenService:Create(DialogScale, Library.TweenInfo, { Scale = 0.95 })
             TweenService:Create(DialogOverlay, Library.TweenInfo, { BackgroundTransparency = 1 }):Play()
             CloseTween:Play()
-            
+
             task.delay(Library.TweenInfo.Time, function()
-                DialogOverlay:Destroy()
+                DialogOverlay.Visible = false
             end)
+
+            if Info.OnDismiss then
+                Library:SafeCallback(Info.OnDismiss, Dialog)
+            end
+
+            if Info.AutoDestroy then
+                task.delay(Library.TweenInfo.Time, function()
+                    Dialog:Destroy()
+                end)
+            end
+        end
+
+        function Dialog:Destroy()
+            if Info.OnDestroy then
+                Library:SafeCallback(Info.OnDestroy, Dialog)
+            end
+            Library.ActiveDialog = nil
+            Dialog.Visible = false
+
+            for _, element in Dialog.Elements do
+                if element.Idx then
+                    Options[element.Idx] = nil
+                    Toggles[element.Idx] = nil
+                end
+            end
+
+            DialogOverlay:Destroy()
             Library.Dialogues[Idx] = nil
+        end
+
+        function Dialog:Show()
+            if Dialog.Visible then return end
+            Dialog.Visible = true
+            Library.ActiveDialog = Dialog
+
+            DialogOverlay.Visible = true
+            DialogOverlay.BackgroundTransparency = 1
+            DialogScale.Scale = 0.95
+
+            TweenService:Create(DialogOverlay, Library.TweenInfo, { BackgroundTransparency = 0.5 }):Play()
+            TweenService:Create(DialogScale, Library.TweenInfo, { Scale = 1 }):Play()
+
+            if Info.OnShow then
+                Library:SafeCallback(Info.OnShow, Dialog)
+            end
+        end
+
+        function Dialog:IsVisible()
+            return Dialog.Visible
+        end
+
+        function Dialog:GetElement(key)
+            for _, element in Dialog.Elements do
+                if element.Idx == key then
+                    return element
+                end
+            end
+            return Options[key] or Toggles[key]
+        end
+
+        function Dialog:RemoveElement(key)
+            for i, element in Dialog.Elements do
+                if element.Idx == key then
+                    if element.Holder then element.Holder:Destroy() end
+                    Options[key] = nil
+                    Toggles[key] = nil
+                    table.remove(Dialog.Elements, i)
+                    Dialog:Resize()
+                    return true
+                end
+            end
+            return false
+        end
+
+        function Dialog:ClearElements()
+            for i = #Dialog.Elements, 1, -1 do
+                local element = Dialog.Elements[i]
+                if element.Holder then element.Holder:Destroy() end
+                if element.Idx then
+                    Options[element.Idx] = nil
+                    Toggles[element.Idx] = nil
+                end
+                table.remove(Dialog.Elements, i)
+            end
+            Dialog:Resize()
         end
 
         DialogOverlay.MouseButton1Click:Connect(function()
@@ -8580,6 +9086,41 @@ function Library:CreateWindow(WindowInfo)
             if FooterButtonsList[ButtonIdx] and FooterButtonsList[ButtonIdx].Container then
                 FooterButtonsList[ButtonIdx].Container.LayoutOrder = Order
             end
+        end
+
+        function Dialog:SetButtonText(ButtonIdx, Text)
+            local BtnWrap = FooterButtonsList[ButtonIdx]
+            if BtnWrap and BtnWrap.Label then
+                BtnWrap.Label.Text = Text
+                local LabelX, _ = Library:GetTextBounds(Text, Library.Scheme.Font, 14, 250)
+                BtnWrap.Container.Size = UDim2.fromOffset(LabelX + 30, 26)
+                BtnWrap.TextBtn.Size = UDim2.fromOffset(LabelX + 30, 26)
+                Dialog:Resize()
+            end
+        end
+
+        function Dialog:SetButtonVariant(ButtonIdx, NewVariant)
+            local BtnWrap = FooterButtonsList[ButtonIdx]
+            if not BtnWrap then return end
+
+            local BtnColor = "MainColor"
+            local TextColor = Library.Scheme.FontColor
+
+            if NewVariant == "Primary" then
+                BtnColor = Library.Scheme.FontColor
+                TextColor = Library.Scheme.BackgroundColor
+            elseif NewVariant == "Secondary" then
+                BtnColor = Library.Scheme.MainColor
+            elseif NewVariant == "Destructive" then
+                BtnColor = Color3.fromRGB(220, 38, 38)
+                TextColor = Color3.new(1, 1, 1)
+            elseif NewVariant == "Ghost" then
+                BtnColor = Library.Scheme.BackgroundColor
+            end
+
+            BtnWrap.Variant = NewVariant
+            BtnWrap.TextBtn.BackgroundColor3 = BtnColor
+            BtnWrap.Label.TextColor3 = TextColor
         end
 
         function Dialog:AddFooterButton(ButtonIdx, ButtonInfo)
@@ -8683,6 +9224,9 @@ function Library:CreateWindow(WindowInfo)
 
             local ButtonWrap = {
                 Container = ButtonContainer,
+                TextBtn = TextBtn,
+                Label = BtnLabel,
+                Variant = Variant,
                 SetDisabled = function(self, Disabled)
                     IsActive = not Disabled
                     if Disabled then
@@ -8748,8 +9292,13 @@ function Library:CreateWindow(WindowInfo)
         Library.Dialogues[Idx] = Dialog
 
         Dialog:Resize()
-        
+
         Library.ActiveDialog = Dialog
+
+        if Info.OnShow then
+            Library:SafeCallback(Info.OnShow, Dialog)
+        end
+
         return Dialog
     end
 
@@ -9022,7 +9571,50 @@ do
         Library.IsRobloxFocused = false
     end))
 
+    Library.Window = Window
     return Window
+end
+
+function Library:Confirm(Info)
+    assert(Library.Window, "Library:Confirm requires a window to be created first")
+
+    local ConfirmIdx = "__Confirm_" .. tostring(tick())
+    local ConfirmDialog
+    ConfirmDialog = Library.Window:AddDialog(ConfirmIdx, {
+        Title = Info.Title or "Confirm",
+        Description = Info.Description or "Are you sure?",
+        Icon = Info.Icon,
+        AutoDismiss = false,
+        AutoDestroy = true,
+        OutsideClickDismiss = Info.OutsideClickDismiss ~= false,
+        FooterButtons = {
+            Cancel = {
+                Title = Info.CancelText or "Cancel",
+                Variant = "Ghost",
+                Order = 1,
+                Callback = function()
+                    ConfirmDialog:Dismiss()
+                    if Info.Callback then
+                        Library:SafeCallback(Info.Callback, false)
+                    end
+                end
+            },
+            Confirm = {
+                Title = Info.ConfirmText or "Confirm",
+                Variant = Info.ConfirmVariant or "Primary",
+                WaitTime = Info.WaitTime,
+                Order = 2,
+                Callback = function()
+                    ConfirmDialog:Dismiss()
+                    if Info.Callback then
+                        Library:SafeCallback(Info.Callback, true)
+                    end
+                end
+            }
+        }
+    })
+
+    return ConfirmDialog
 end
 
 local function OnPlayerChange()
