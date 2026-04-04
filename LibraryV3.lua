@@ -9582,6 +9582,17 @@ end
 function Library:Confirm(Info)
     assert(Library.Window, "Library:Confirm requires a window to be created first")
 
+    local PreviousDialog = Library.ActiveDialog
+    if PreviousDialog then
+        PreviousDialog:Dismiss()
+    end
+
+    local function Restore()
+        if PreviousDialog then
+            PreviousDialog:Show()
+        end
+    end
+
     local ConfirmIdx = "__Confirm_" .. tostring(tick())
     local ConfirmDialog
     ConfirmDialog = Library.Window:AddDialog(ConfirmIdx, {
@@ -9591,6 +9602,7 @@ function Library:Confirm(Info)
         AutoDismiss = false,
         AutoDestroy = true,
         OutsideClickDismiss = Info.OutsideClickDismiss ~= false,
+        OnDismiss = Restore,
         FooterButtons = {
             Cancel = {
                 Title = Info.CancelText or "Cancel",
