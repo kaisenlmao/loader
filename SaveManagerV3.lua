@@ -43,6 +43,9 @@ local SaveManager = {} do
     SaveManager.SubFolder = ""
     SaveManager.Ignore = {}
     SaveManager.Library = nil
+    SaveManager.AutoSave = false
+    SaveManager._autoSaveThread = nil
+    SaveManager._autoSaveHooked = {}
     SaveManager.Parser = {
         Toggle = {
             Save = function(idx, object)
@@ -178,7 +181,7 @@ local SaveManager = {} do
     end
 
     function SaveManager:SetIgnoreIndexes(list)
-        for _, key in pairs(list) do
+        for _, key in list do
             self.Ignore[key] = true
         end
     end
@@ -209,7 +212,7 @@ local SaveManager = {} do
             objects = {}
         }
 
-        for idx, toggle in pairs(self.Library.Toggles) do
+        for idx, toggle in self.Library.Toggles do
             if not toggle.Type then continue end
             if not self.Parser[toggle.Type] then continue end
             if self.Ignore[idx] then continue end
@@ -217,7 +220,7 @@ local SaveManager = {} do
             table.insert(data.objects, self.Parser[toggle.Type].Save(idx, toggle))
         end
 
-        for idx, option in pairs(self.Library.Options) do
+        for idx, option in self.Library.Options do
             if not option.Type then continue end
             if not self.Parser[option.Type] then continue end
             if self.Ignore[idx] then continue end
@@ -250,7 +253,7 @@ local SaveManager = {} do
         local success, decoded = pcall(HttpService.JSONDecode, HttpService, readfile(file))
         if not success then return false, "decode error" end
 
-        for _, option in pairs(decoded.objects) do
+        for _, option in decoded.objects do
             if not option.type then continue end
             if not self.Parser[option.type] then continue end
             if self.Ignore[option.idx] then continue end
@@ -404,7 +407,89 @@ local SaveManager = {} do
         return true, ""
     end
 
-    
+    function SaveManager:_QueueAutoSave()
+        if not self.AutoSave then return end
+
+        local name = self:GetAutoloadConfig()
+        if name == "none" then return end
+
+        if self._autoSaveThread then
+            task.cancel(self._autoSaveThread)
+        end
+
+        self._autoSaveThread = task.delay(1, function()
+            self._autoSaveThread = nil
+            if not self.AutoSave then return end
+            self:Save(name)
+        end)
+    end
+
+    function SaveManager:_HookElement(idx, element)
+        if self._autoSaveHooked[idx] then return end
+        if self.Ignore[idx] then return end
+        if not element.Type or not self.Parser[element.Type] then return end
+
+        self._autoSaveHooked[idx] = true
+        local prev = element.Changed
+
+        element.Changed = function(...)
+            if prev then
+                prev(...)
+            end
+            self:_QueueAutoSave()
+        end
+    end
+
+    function SaveManager:SetupAutoSave()
+        for idx, toggle in self.Library.Toggles do
+            self:_HookElement(idx, toggle)
+        end
+        for idx, option in self.Library.Options do
+            self:_HookElement(idx, option)
+        end
+
+        -- Watch for new elements being added
+        local Toggles_mt = getmetatable(self.Library.Toggles)
+        if not Toggles_mt or not Toggles_mt.__autosave then
+            local mt = Toggles_mt or {}
+            local oldNewIndex = mt.__newindex
+            mt.__autosave = true
+            mt.__newindex = function(t, k, v)
+                if oldNewIndex then
+                    oldNewIndex(t, k, v)
+                else
+                    rawset(t, k, v)
+                end
+                if v and typeof(v) == "table" then
+                    self:_HookElement(k, v)
+                end
+            end
+            if not Toggles_mt then
+                setmetatable(self.Library.Toggles, mt)
+            end
+        end
+
+        local Options_mt = getmetatable(self.Library.Options)
+        if not Options_mt or not Options_mt.__autosave then
+            local mt = Options_mt or {}
+            local oldNewIndex = mt.__newindex
+            mt.__autosave = true
+            mt.__newindex = function(t, k, v)
+                if oldNewIndex then
+                    oldNewIndex(t, k, v)
+                else
+                    rawset(t, k, v)
+                end
+                if v and typeof(v) == "table" then
+                    self:_HookElement(k, v)
+                end
+            end
+            if not Options_mt then
+                setmetatable(self.Library.Options, mt)
+            end
+        end
+    end
+
     function SaveManager:BuildConfigSection(tab)
         assert(self.Library, "Must set SaveManager.Library")
 
@@ -500,7 +585,18 @@ local SaveManager = {} do
 
         self.AutoloadConfigLabel = section:AddLabel("Current autoload config: " .. self:GetAutoloadConfig(), true)
 
-        
+        section:AddDivider()
+
+        section:AddToggle("SaveManager_AutoSave", {
+            Text = "Auto Save Config",
+            Default = false,
+            Callback = function(value)
+                self.AutoSave = value
+                if value then
+                    self:SetupAutoSave()
+                end
+            end,
+        })
 
         section:AddDivider()
 
@@ -509,7 +605,7 @@ local SaveManager = {} do
                 objects = {}
             }
 
-            for idx, toggle in pairs(self.Library.Toggles) do
+            for idx, toggle in self.Library.Toggles do
                 if not toggle.Type then continue end
                 if not self.Parser[toggle.Type] then continue end
                 if self.Ignore[idx] then continue end
@@ -517,7 +613,7 @@ local SaveManager = {} do
                 table.insert(data.objects, self.Parser[toggle.Type].Save(idx, toggle))
             end
 
-            for idx, option in pairs(self.Library.Options) do
+            for idx, option in self.Library.Options do
                 if not option.Type then continue end
                 if not self.Parser[option.Type] then continue end
                 if self.Ignore[idx] then continue end
@@ -554,7 +650,7 @@ local SaveManager = {} do
                 return
             end
 
-            for _, option in pairs(decoded.objects) do
+            for _, option in decoded.objects do
                 if not option.type then continue end
                 if not self.Parser[option.type] then continue end
                 if self.Ignore[option.idx] then continue end
@@ -565,7 +661,7 @@ local SaveManager = {} do
             self.Library:Notify("Config imported successfully")
         end)
 
-        self:SetIgnoreIndexes({ "SaveManager_ConfigList", "SaveManager_ConfigName", "SaveManager_ImportData" })
+        self:SetIgnoreIndexes({ "SaveManager_ConfigList", "SaveManager_ConfigName", "SaveManager_ImportData", "SaveManager_AutoSave" })
     end
 
     SaveManager:BuildFolderTree()
