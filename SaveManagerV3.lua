@@ -393,6 +393,33 @@ local SaveManager = {} do
         return true, ""
     end
 
+    function SaveManager:GetAutoSaveState()
+        SaveManager:CheckFolderTree()
+
+        local path = self.Folder .. "/settings/autosave.txt"
+        if SaveManager:CheckSubFolder(true) then
+            path = self.Folder .. "/settings/" .. self.SubFolder .. "/autosave.txt"
+        end
+
+        if isfile(path) then
+            local ok, val = pcall(readfile, path)
+            if ok and val == "true" then return true end
+        end
+
+        return false
+    end
+
+    function SaveManager:SaveAutoSaveState(enabled)
+        SaveManager:CheckFolderTree()
+
+        local path = self.Folder .. "/settings/autosave.txt"
+        if SaveManager:CheckSubFolder(true) then
+            path = self.Folder .. "/settings/" .. self.SubFolder .. "/autosave.txt"
+        end
+
+        pcall(writefile, path, tostring(enabled))
+    end
+
     function SaveManager:DeleteAutoLoadConfig()
         SaveManager:CheckFolderTree()
 
@@ -571,6 +598,9 @@ local SaveManager = {} do
 
             self.Library:Notify(string.format("Set %q to auto load", name))
             self.AutoloadConfigLabel:SetText("Current autoload config: " .. name)
+            if self.AutoSave and self.AutoSaveLabel then
+                self.AutoSaveLabel:SetText("Auto saving to: " .. name)
+            end
         end)
         section:AddButton("Reset autoload", function()
             local success, err = self:DeleteAutoLoadConfig()
@@ -581,24 +611,39 @@ local SaveManager = {} do
 
             self.Library:Notify("Set autoload to none")
             self.AutoloadConfigLabel:SetText("Current autoload config: none")
+            if self.AutoSave and self.AutoSaveLabel then
+                self.AutoSaveLabel:SetText("Auto saving to: none (set autoload first)")
+            end
         end)
 
         self.AutoloadConfigLabel = section:AddLabel("Current autoload config: " .. self:GetAutoloadConfig(), true)
 
-        section:AddDivider()
+        local savedAutoSave = self:GetAutoSaveState()
+        local autoSaveConfig = self:GetAutoloadConfig()
 
         section:AddToggle("SaveManager_AutoSave", {
             Text = "Auto Save Config",
-            Default = false,
+            Default = savedAutoSave,
             Callback = function(value)
                 self.AutoSave = value
+                self:SaveAutoSaveState(value)
                 if value then
                     self:SetupAutoSave()
+                    local name = self:GetAutoloadConfig()
+                    self.AutoSaveLabel:SetText("Auto saving to: " .. (if name ~= "none" then name else "none (set autoload first)"))
+                else
+                    self.AutoSaveLabel:SetText("Auto saving to: disabled")
                 end
             end,
         })
 
-        section:AddDivider()
+        self.AutoSaveLabel = section:AddLabel("Auto saving to: " .. (if savedAutoSave then (if autoSaveConfig ~= "none" then autoSaveConfig else "none (set autoload first)") else "disabled"), true)
+
+        if savedAutoSave then
+            self.AutoSave = true
+            self:SetupAutoSave()
+        end
+
 
         section:AddButton("Export config", function()
             local data = {
