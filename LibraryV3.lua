@@ -8725,10 +8725,14 @@ function Library:CreateWindow(WindowInfo)
         )
         Library:AddOutline(DialogFrame)
 
-        local InnerContainer = New("Frame", {
+        local InnerContainer = New("ScrollingFrame", {
             BackgroundTransparency = 1,
             Size = UDim2.fromScale(1, 0),
-            AutomaticSize = Enum.AutomaticSize.Y,
+            AutomaticCanvasSize = Enum.AutomaticSize.Y,
+            CanvasSize = UDim2.new(0, 0, 0, 0),
+            ScrollBarThickness = 0,
+            ScrollBarImageColor3 = "AccentColor",
+            ScrollingDirection = Enum.ScrollingDirection.Y,
             ZIndex = 9002,
             Parent = DialogFrame,
         })
@@ -8746,7 +8750,7 @@ function Library:CreateWindow(WindowInfo)
             PaddingTop = UDim.new(0, 15),
             Parent = InnerContainer,
         })
-        local _InnerLayout = New("UIListLayout", {
+        local InnerLayout = New("UIListLayout", {
             Padding = UDim.new(0, 10),
             SortOrder = Enum.SortOrder.LayoutOrder,
             Parent = InnerContainer,
@@ -8915,7 +8919,7 @@ function Library:CreateWindow(WindowInfo)
 
         function Dialog:Resize()
             local MaxWidth = MainFrame.AbsoluteSize.X * 0.75
-            local MinWidth = Info.Width or 400
+            local MinWidth = math.min(Info.Width or 400, MaxWidth)
 
             local TotalButtonWidth = 0
             local ButtonCount = 0
@@ -8936,6 +8940,12 @@ function Library:CreateWindow(WindowInfo)
             end
 
             DialogFrame.Size = UDim2.fromOffset(TargetWidth, 0)
+
+            local maxDialogHeight = MainFrame.AbsoluteSize.Y * 0.85
+            local contentHeight = InnerLayout.AbsoluteContentSize.Y + 30
+            local innerHeight = math.min(contentHeight, maxDialogHeight)
+            InnerContainer.Size = UDim2.new(1, 0, 0, innerHeight)
+            InnerContainer.ScrollBarThickness = contentHeight > maxDialogHeight and 4 or 0
 
             local _DescX, DescY = Library:GetTextBounds(DescriptionLabel.Text, Library.Scheme.Font, 14, TargetWidth - 30)
             DescriptionLabel.Size = UDim2.new(1, 0, 0, DescY)
