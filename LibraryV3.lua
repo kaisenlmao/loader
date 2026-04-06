@@ -9461,7 +9461,7 @@ do
         local ToggleBtnTexture = "rbxassetid://72530843154458"
         
         local ToggleBtnSize = 56   
-        local ToggleBtnIconSize = 34 
+        local ToggleBtnIconSize = 49 
 
         local ToggleBtnFrame = New("ImageButton", {
             AnchorPoint = Vector2.new(0.5, 0),
