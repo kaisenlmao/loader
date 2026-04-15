@@ -7174,7 +7174,15 @@ function Library:CreateWindow(WindowInfo)
 
         
         local NeonColor = Color3.fromRGB(255, 160, 182)
-        for i, layer in { { Thickness = 1.75, Transparency = 0.4 }, { Thickness = 3, Transparency = 0.6 } } do
+        local GlowLayers = {
+            { Thickness = 1,   Transparency = 0.15 },
+            { Thickness = 1.5, Transparency = 0.4 },
+            { Thickness = 2,   Transparency = 0.6 },
+            { Thickness = 3,   Transparency = 0.75 },
+            { Thickness = 4.5, Transparency = 0.87 },
+            { Thickness = 6,   Transparency = 0.94 },
+        }
+        for i, layer in GlowLayers do
             local GlowFrame = New("Frame", {
                 AnchorPoint = Vector2.new(0.5, 0.5),
                 BackgroundTransparency = 1,
