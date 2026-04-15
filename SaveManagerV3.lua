@@ -835,7 +835,7 @@ local SaveManager = {} do
             end
         end)
 
-        section:AddInput("SaveManager_ImportData", { Text = "Import data", Placeholder = "Paste config JSON or URL here..." })
+        section:AddInput("SaveManager_ImportData", { Text = "Import Config", Placeholder = "Paste config JSON or URL here..." })
         section:AddButton("Import config", function()
             local raw = self.Library.Options.SaveManager_ImportData.Value
 
