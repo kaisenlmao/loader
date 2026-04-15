@@ -604,7 +604,6 @@ local SaveManager = {} do
             self.Library.Options.SaveManager_ConfigList:SetValue(nil)
         end)
 
-        section:AddDivider()
 
         section:AddDropdown("SaveManager_ConfigList", { Text = "Config list", Values = self:RefreshConfigList(), AllowNull = true })
         section:AddButton("Load config", function()
@@ -661,7 +660,7 @@ local SaveManager = {} do
             self.Library:Notify(string.format("Set %q to auto load", name))
             self.AutoloadConfigLabel:SetText("Current autoload config: " .. name)
             if self.AutoSave and self.AutoSaveLabel then
-                self.AutoSaveLabel:SetText("Auto saving to: " .. name)
+                self.AutoSaveLabel:SetText("Auto Saving: " .. name)
             end
         end)
         section:AddButton("Reset autoload", function()
@@ -674,7 +673,7 @@ local SaveManager = {} do
             self.Library:Notify("Set autoload to none")
             self.AutoloadConfigLabel:SetText("Current autoload config: none")
             if self.AutoSave and self.AutoSaveLabel then
-                self.AutoSaveLabel:SetText("Auto saving to: none (set autoload first)")
+                self.AutoSaveLabel:SetText("Auto Saving: none (set autoload first)")
             end
         end)
 
@@ -692,21 +691,19 @@ local SaveManager = {} do
                 if value then
                     self:SetupAutoSave()
                     local name = self:GetAutoloadConfig()
-                    self.AutoSaveLabel:SetText("Auto saving to: " .. (if name ~= "none" then name else "none (set autoload first)"))
+                    self.AutoSaveLabel:SetText("Auto Saving: " .. (if name ~= "none" then name else "none (set autoload first)"))
                 else
-                    self.AutoSaveLabel:SetText("Auto saving to: disabled")
+                    self.AutoSaveLabel:SetText("Auto Saving: disabled")
                 end
             end,
         })
 
-        self.AutoSaveLabel = section:AddLabel("Auto saving to: " .. (if savedAutoSave then (if autoSaveConfig ~= "none" then autoSaveConfig else "none (set autoload first)") else "disabled"), true)
+        self.AutoSaveLabel = section:AddLabel("Auto Saving: " .. (if savedAutoSave then (if autoSaveConfig ~= "none" then autoSaveConfig else "none (set autoload first)") else "disabled"), true)
 
         if savedAutoSave then
             self.AutoSave = true
             self:SetupAutoSave()
         end
-
-        section:AddDivider()
 
         do
             local Window = self.Library.Window
@@ -803,8 +800,6 @@ local SaveManager = {} do
                 true
             )
         end
-
-        section:AddDivider()
 
         section:AddButton("Export config", function()
             local data = {
