@@ -783,7 +783,6 @@ local SaveManager = {} do
                 end,
             })
 
-            Dialog:AddDivider()
             Dialog:AddInput("SaveManager_AccName", { Text = "Account name", Default = playerName, Placeholder = "Exact username" })
             Dialog:AddDropdown("SaveManager_AccConfig", { Text = "Config to load", Values = self:RefreshConfigList(), AllowNull = true })
 
