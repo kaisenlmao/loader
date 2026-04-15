@@ -8098,7 +8098,7 @@ function Library:CreateWindow(WindowInfo)
                     Image = ChevronIcon and ChevronIcon.Url or "",
                     ImageRectOffset = ChevronIcon and ChevronIcon.ImageRectOffset or Vector2.zero,
                     ImageRectSize = ChevronIcon and ChevronIcon.ImageRectSize or Vector2.zero,
-                    ImageColor3 = "WhiteColor",
+                    ImageColor3 = Color3.fromRGB(55, 55, 55),
                     ImageTransparency = 0.15,
                     Parent = GroupboxHolder,
                 })
