@@ -2463,7 +2463,7 @@ function Library:Unload()
 end
 
 local CheckIcon = Library:GetIcon("check")
-local ArrowIcon = Library:GetIcon("chevron-up")
+local ArrowIcon = Library:GetIcon("chevron-down")
 local ResizeIcon = Library:GetIcon("move-diagonal-2")
 local KeyIcon = Library:GetIcon("key")
 local MoveIcon = Library:GetIcon("move")
@@ -2474,7 +2474,7 @@ function Library:SetIconModule(module: IconModule)
 
     -- Top ten fixes 🚀
     CheckIcon = Library:GetIcon("check")
-    ArrowIcon = Library:GetIcon("chevron-up")
+    ArrowIcon = Library:GetIcon("chevron-down")
     ResizeIcon = Library:GetIcon("move-diagonal-2")
     KeyIcon = Library:GetIcon("key")
     MoveIcon = Library:GetIcon("move")
@@ -8089,7 +8089,7 @@ function Library:CreateWindow(WindowInfo)
                     Parent = GroupboxLabel,
                 })
 
-                local ChevronIcon = Library:GetIcon("chevron-up") or ArrowIcon
+                local ChevronIcon = Library:GetIcon("chevron-down") or ArrowIcon
                 MinimizeBtn = New("ImageButton", {
                     AnchorPoint = Vector2.new(1, 0.5),
                     BackgroundTransparency = 1,
