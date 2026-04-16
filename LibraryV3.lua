@@ -4728,12 +4728,17 @@ do
             Parent = Holder,
         })
 
+        local Fill = New("Frame", {
+            BackgroundColor3 = "AccentColor",
+            Size = UDim2.fromScale(0.5, 1),
+            Parent = Bar,
+        })
+
         local DisplayLabel = New("TextLabel", {
             BackgroundTransparency = 1,
             Size = UDim2.fromScale(1, 1),
             Text = "",
             TextSize = 14,
-            ZIndex = 2,
             Parent = Bar,
         })
         New("UIStroke", {
@@ -4741,12 +4746,6 @@ do
             Color = "DarkColor",
             LineJoinMode = Enum.LineJoinMode.Miter,
             Parent = DisplayLabel,
-        })
-
-        local Fill = New("Frame", {
-            BackgroundColor3 = "AccentColor",
-            Size = UDim2.fromScale(0.5, 1),
-            Parent = Bar,
         })
 
         function Slider:UpdateColors()
