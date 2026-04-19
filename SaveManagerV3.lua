@@ -46,6 +46,7 @@ local SaveManager = {} do
     SaveManager.AutoSave = false
     SaveManager._autoSaveThread = nil
     SaveManager._autoSaveHooked = {}
+    SaveManager.CustomData = {}
     SaveManager.Parser = {
         Toggle = {
             Save = function(idx, object)
@@ -196,7 +197,10 @@ local SaveManager = {} do
         self:BuildFolderTree()
     end
 
-    
+    function SaveManager:RegisterCustomData(key, saveFn, loadFn)
+        self.CustomData[key] = { Save = saveFn, Load = loadFn }
+    end
+
     function SaveManager:Save(name)
         if (not name) then
             return false, "no config file is selected"
@@ -226,6 +230,14 @@ local SaveManager = {} do
             if self.Ignore[idx] then continue end
 
             table.insert(data.objects, self.Parser[option.Type].Save(idx, option))
+        end
+
+        if next(self.CustomData) then
+            data.custom = {}
+            for key, handler in self.CustomData do
+                local ok, val = pcall(handler.Save)
+                if ok then data.custom[key] = val end
+            end
         end
 
         local success, encoded = pcall(HttpService.JSONEncode, HttpService, data)
@@ -258,7 +270,15 @@ local SaveManager = {} do
             if not self.Parser[option.type] then continue end
             if self.Ignore[option.idx] then continue end
 
-            task.spawn(self.Parser[option.type].Load, option.idx, option) 
+            task.spawn(self.Parser[option.type].Load, option.idx, option)
+        end
+
+        if decoded.custom and next(self.CustomData) then
+            for key, handler in self.CustomData do
+                if decoded.custom[key] ~= nil then
+                    pcall(handler.Load, decoded.custom[key])
+                end
+            end
         end
 
         return true
@@ -821,6 +841,14 @@ local SaveManager = {} do
                 table.insert(data.objects, self.Parser[option.Type].Save(idx, option))
             end
 
+            if next(self.CustomData) then
+                data.custom = {}
+                for key, handler in self.CustomData do
+                    local ok, val = pcall(handler.Save)
+                    if ok then data.custom[key] = val end
+                end
+            end
+
             local success, encoded = pcall(HttpService.JSONEncode, HttpService, data)
             if not success then
                 self.Library:Notify("Failed to export config")
@@ -868,6 +896,14 @@ local SaveManager = {} do
                 if self.Ignore[option.idx] then continue end
 
                 task.spawn(self.Parser[option.type].Load, option.idx, option)
+            end
+
+            if decoded.custom and next(self.CustomData) then
+                for key, handler in self.CustomData do
+                    if decoded.custom[key] ~= nil then
+                        pcall(handler.Load, decoded.custom[key])
+                    end
+                end
             end
 
             self.Library:Notify("Config imported successfully")
