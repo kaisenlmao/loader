@@ -86,9 +86,16 @@ local SaveManager = {} do
                 return { type = "ColorPicker", idx = idx, value = object.Value:ToHex(), transparency = object.Transparency }
             end,
             Load = function(idx, data)
-                if SaveManager.Library.Options[idx] then
-                    SaveManager.Library.Options[idx]:SetValueRGB(Color3.fromHex(data.value), data.transparency)
+                local object = SaveManager.Library.Options[idx]
+                if not object then return end
+                if typeof(data.value) ~= "string" then return end
+                local ok, color = pcall(Color3.fromHex, data.value)
+                if not ok or typeof(color) ~= "Color3" then return end
+                local transparency = data.transparency
+                if typeof(transparency) ~= "number" then
+                    transparency = nil
                 end
+                object:SetValueRGB(color, transparency)
             end,
         },
         KeyPicker = {
@@ -245,7 +252,10 @@ local SaveManager = {} do
             return false, "failed to encode data"
         end
 
-        writefile(fullPath, encoded)
+        local ok, err = pcall(writefile, fullPath, encoded)
+        if not ok then
+            return false, tostring(err) or "write file error"
+        end
         return true
     end
 
@@ -262,8 +272,14 @@ local SaveManager = {} do
 
         if not isfile(file) then return false, "invalid file" end
 
-        local success, decoded = pcall(HttpService.JSONDecode, HttpService, readfile(file))
+        local readSuccess, raw = pcall(readfile, file)
+        if not readSuccess then return false, "read file error" end
+
+        local success, decoded = pcall(HttpService.JSONDecode, HttpService, raw)
         if not success then return false, "decode error" end
+        if typeof(decoded) ~= "table" or typeof(decoded.objects) ~= "table" then
+            return false, "invalid config data"
+        end
 
         for _, option in decoded.objects do
             if not option.type then continue end
@@ -367,7 +383,7 @@ local SaveManager = {} do
                 return "none"
             end
 
-            name = tostring(name)
+            name = tostring(name):match("^%s*(.-)%s*$")
             return if name == "" then "none" else name
         end
 
@@ -398,7 +414,12 @@ local SaveManager = {} do
         if isfile(autoLoadPath) then
             local successRead, name = pcall(readfile, autoLoadPath)
             if not successRead then
-                self.Library:Notify("Failed to load autoload config: write file error")
+                self.Library:Notify("Failed to load autoload config: read file error")
+                return
+            end
+
+            name = tostring(name):match("^%s*(.-)%s*$")
+            if name == "" then
                 return
             end
 
@@ -490,13 +511,25 @@ local SaveManager = {} do
         if not element.Type or not self.Parser[element.Type] then return end
 
         self._autoSaveHooked[idx] = true
-        local prev = element.Changed
 
-        element.Changed = function(...)
-            if prev then
-                prev(...)
+        local prevCallback = element.Callback
+        element.Callback = function(...)
+            if prevCallback then
+                prevCallback(...)
             end
             self:_QueueAutoSave()
+        end
+
+        -- KeyPicker rebinding fires ChangedCallback/Changed but not Callback,
+        -- and ChangedCallback is not user-overridable, so it's a safe persistent hook point.
+        if element.Type == "KeyPicker" then
+            local prevChangedCallback = element.ChangedCallback
+            element.ChangedCallback = function(...)
+                if prevChangedCallback then
+                    prevChangedCallback(...)
+                end
+                self:_QueueAutoSave()
+            end
         end
     end
 
@@ -574,13 +607,14 @@ local SaveManager = {} do
 
     function SaveManager:SaveAccountConfigs(data)
         SaveManager:CheckFolderTree()
-        if SaveManager:CheckSubFolder(true) then end
+        SaveManager:CheckSubFolder(true)
 
         local ok, encoded = pcall(HttpService.JSONEncode, HttpService, data)
         if not ok then return false end
 
         local path = self:_GetAccountConfigsPath()
-        pcall(writefile, path, encoded)
+        local writeOk = pcall(writefile, path, encoded)
+        if not writeOk then return false end
         return true
     end
 
