@@ -48,6 +48,33 @@ local CustomImageManagerAssets = {
     },
 }
 do
+    local function SafeIsFolder(Path: string)
+        if not isfolder then
+            return false
+        end
+
+        local Success, Result = pcall(isfolder, Path)
+        return Success and Result == true
+    end
+
+    local function SafeMakeFolder(Path: string)
+        if not makefolder then
+            return false
+        end
+
+        local Success = pcall(makefolder, Path)
+        return Success
+    end
+
+    local function SafeIsFile(Path: string)
+        if not isfile then
+            return false
+        end
+
+        local Success, Result = pcall(isfile, Path)
+        return Success and Result == true
+    end
+
     local function RecursiveCreatePath(Path: string, IsFile: boolean?)
         if not isfolder or not makefolder then
             return
@@ -61,8 +88,8 @@ do
         end
 
         for _, Segment in ipairs(Segments) do
-            if not isfolder(TraversedPath .. Segment) then
-                makefolder(TraversedPath .. Segment)
+            if not SafeIsFolder(TraversedPath .. Segment) then
+                SafeMakeFolder(TraversedPath .. Segment)
             end
 
             TraversedPath = TraversedPath .. Segment .. "/"
@@ -127,7 +154,7 @@ do
 
         RecursiveCreatePath(AssetData.Path, true)
 
-        if ForceRedownload ~= true and isfile(AssetData.Path) then
+        if ForceRedownload ~= true and SafeIsFile(AssetData.Path) then
             return true, nil
         end
 
@@ -5102,13 +5129,13 @@ do
 
         function Dropdown:GetActiveValues()
             if Info.Multi then
-                local Table = {}
+                local Count = 0
 
                 for Value, _ in Dropdown.Value do
-                    table.insert(Table, Value)
+                    Count += 1
                 end
 
-                return Table
+                return Count
             end
 
             return Dropdown.Value and 1 or 0
@@ -5240,6 +5267,10 @@ do
         end
 
         function Dropdown:SetValues(Values)
+            if typeof(Values) ~= "table" then
+                Values = {}
+            end
+
             Dropdown.Values = Values
             Dropdown:BuildDropdownList()
         end
@@ -5259,6 +5290,10 @@ do
         end
 
         function Dropdown:SetDisabledValues(DisabledValues)
+            if typeof(DisabledValues) ~= "table" then
+                DisabledValues = {}
+            end
+
             Dropdown.DisabledValues = DisabledValues
             Dropdown:BuildDropdownList()
         end
@@ -6078,6 +6113,10 @@ do
 
         local function NormalizeItems(items)
             local normalized = {}
+            if typeof(items) ~= "table" then
+                return normalized
+            end
+
             for i, item in items do
                 if typeof(item) == "string" then
                     table.insert(normalized, { Key = i, Display = item })
@@ -9064,7 +9103,9 @@ function Library:CreateWindow(WindowInfo)
         function Dialog:Dismiss()
             if not Dialog.Visible then return end
             Dialog.Visible = false
-            Library.ActiveDialog = nil
+            if Library.ActiveDialog == Dialog then
+                Library.ActiveDialog = nil
+            end
 
             local CloseTween = TweenService:Create(DialogScale, Library.TweenInfo, { Scale = 0.95 })
             TweenService:Create(DialogOverlay, Library.TweenInfo, { BackgroundTransparency = 1 }):Play()
@@ -9392,10 +9433,12 @@ function Library:CreateWindow(WindowInfo)
 
         Dialog:Resize()
 
-        Library.ActiveDialog = Dialog
+        if not Info.StartHidden then
+            Library.ActiveDialog = Dialog
 
-        if Info.OnShow then
-            Library:SafeCallback(Info.OnShow, Dialog)
+            if Info.OnShow then
+                Library:SafeCallback(Info.OnShow, Dialog)
+            end
         end
 
         return Dialog
@@ -9436,10 +9479,16 @@ function Library:CreateWindow(WindowInfo)
 
             for _, Option in Library.Options do
                 if Option.Type == "ColorPicker" then
-                    Option.ColorMenu:Close()
-                    Option.ContextMenu:Close()
+                    if Option.ColorMenu then
+                        Option.ColorMenu:Close()
+                    end
+                    if Option.ContextMenu then
+                        Option.ContextMenu:Close()
+                    end
                 elseif Option.Type == "Dropdown" or Option.Type == "KeyPicker" then
-                    Option.Menu:Close()
+                    if Option.Menu then
+                        Option.Menu:Close()
+                    end
                 end
             end
         end

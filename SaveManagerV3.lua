@@ -1,41 +1,79 @@
 local cloneref = (cloneref or clonereference or function(instance: any)
     return instance
 end)
-local clonefunction = (clonefunction or copyfunction or function(func) 
-    return func 
-end)
+local clonefunction = clonefunction or copyfunction
 
 local HttpService: HttpService = cloneref(game:GetService("HttpService"))
-local isfolder, isfile, listfiles = isfolder, isfile, listfiles
+local request = request or http_request or (syn and syn.request) or (http and http.request)
+local setclipboard = setclipboard or toclipboard or set_clipboard
 
-if typeof(clonefunction) == "function" then
-    
-
-    local
-        isfolder_copy,
-        isfile_copy,
-        listfiles_copy = clonefunction(isfolder), clonefunction(isfile), clonefunction(listfiles)
-
-    local isfolder_success, isfolder_error = pcall(function()
-        return isfolder_copy("test" .. tostring(math.random(1000000, 9999999)))
-    end)
-
-    if isfolder_success == false or typeof(isfolder_error) ~= "boolean" then
-        isfolder = function(folder)
-            local success, data = pcall(isfolder_copy, folder)
-            return (if success then data else false)
-        end
-
-        isfile = function(file)
-            local success, data = pcall(isfile_copy, file)
-            return (if success then data else false)
-        end
-
-        listfiles = function(folder)
-            local success, data = pcall(listfiles_copy, folder)
-            return (if success then data else {})
-        end
+local function CloneExecutorFunction(func)
+    if typeof(func) ~= "function" then
+        return nil
     end
+
+    if typeof(clonefunction) ~= "function" then
+        return func
+    end
+
+    local success, cloned = pcall(clonefunction, func)
+    if success and typeof(cloned) == "function" then
+        return cloned
+    end
+
+    return func
+end
+
+local makefolder = CloneExecutorFunction(makefolder)
+local writefile = CloneExecutorFunction(writefile)
+local readfile = CloneExecutorFunction(readfile)
+local delfile = CloneExecutorFunction(delfile)
+local isfolder = CloneExecutorFunction(isfolder)
+local isfile = CloneExecutorFunction(isfile)
+local listfiles = CloneExecutorFunction(listfiles)
+
+local function SafeIsFolder(folder)
+    if typeof(isfolder) ~= "function" then
+        return false
+    end
+
+    local success, result = pcall(isfolder, folder)
+    return success and result == true
+end
+
+local function SafeIsFile(file)
+    if typeof(isfile) ~= "function" then
+        return false
+    end
+
+    local success, result = pcall(isfile, file)
+    return success and result == true
+end
+
+local function SafeListFiles(folder)
+    if typeof(listfiles) ~= "function" then
+        return {}
+    end
+
+    local success, result = pcall(listfiles, folder)
+    if success and typeof(result) == "table" then
+        return result
+    end
+
+    return {}
+end
+
+local function SafeMakeFolder(folder)
+    if typeof(makefolder) ~= "function" then
+        return false, "makefolder is unavailable"
+    end
+
+    local success, err = pcall(makefolder, folder)
+    if not success then
+        return false, tostring(err)
+    end
+
+    return true
 end
 
 local SaveManager = {} do
@@ -122,6 +160,34 @@ local SaveManager = {} do
         },
     }
 
+    local function TrimString(value)
+        return tostring(value):match("^%s*(.-)%s*$")
+    end
+
+    local function NormalizeConfigName(name)
+        if typeof(name) ~= "string" then
+            return nil, "no config file is selected"
+        end
+
+        name = TrimString(name)
+        if name == "" then
+            return nil, "no config file is selected"
+        end
+        if name:find("/", 1, true) or name:find("\\", 1, true) or name:find("..", 1, true) then
+            return nil, "invalid config file name"
+        end
+
+        return name
+    end
+
+    local function Notify(self, message, time)
+        if self.Library and typeof(self.Library.Notify) == "function" then
+            self.Library:Notify(message, time)
+        else
+            warn(message)
+        end
+    end
+
     function SaveManager:SetLibrary(library)
         self.Library = library
     end
@@ -138,8 +204,12 @@ local SaveManager = {} do
         if typeof(self.SubFolder) ~= "string" or self.SubFolder == "" then return false end
 
         if createFolder == true then
-            if not isfolder(self.Folder .. "/settings/" .. self.SubFolder) then
-                makefolder(self.Folder .. "/settings/" .. self.SubFolder)
+            local subFolder = self.Folder .. "/settings/" .. self.SubFolder
+            if not SafeIsFolder(subFolder) then
+                local success = SafeMakeFolder(subFolder)
+                if not success then
+                    return false
+                end
             end
         end
 
@@ -171,53 +241,109 @@ local SaveManager = {} do
         return paths
     end
 
+    function SaveManager:GetSettingsFolder(createFolder)
+        if typeof(self.SubFolder) == "string" and self.SubFolder ~= "" then
+            if createFolder == true and not self:CheckSubFolder(true) then
+                return nil, "failed to create settings subfolder"
+            end
+
+            return self.Folder .. "/settings/" .. self.SubFolder
+        end
+
+        return self.Folder .. "/settings"
+    end
+
+    function SaveManager:GetConfigPath(name, createFolder)
+        local folder, err = self:GetSettingsFolder(createFolder)
+        if not folder then
+            return nil, err
+        end
+
+        return folder .. "/" .. name .. ".json"
+    end
+
     function SaveManager:BuildFolderTree()
         local paths = self:GetPaths()
 
         for i = 1, #paths do
             local str = paths[i]
-            if isfolder(str) then continue end
+            if SafeIsFolder(str) then continue end
 
-            makefolder(str)
+            local success, err = SafeMakeFolder(str)
+            if not success then
+                return false, err
+            end
         end
+
+        return true
     end
 
     function SaveManager:CheckFolderTree()
-        if isfolder(self.Folder) then return end
-        SaveManager:BuildFolderTree()
+        local success, err = SaveManager:BuildFolderTree()
+        if not success then
+            return false, err or "failed to create settings folders"
+        end
 
         task.wait(0.1)
+        return true
     end
 
     function SaveManager:SetIgnoreIndexes(list)
+        if typeof(list) ~= "table" then
+            return
+        end
+
         for _, key in list do
             self.Ignore[key] = true
         end
     end
 
     function SaveManager:SetFolder(folder)
+        assert(typeof(folder) == "string" and TrimString(folder) ~= "", "folder must be a non-empty string")
+
+        folder = TrimString(folder):gsub("\\", "/"):gsub("/+$", "")
         self.Folder = folder
         self:BuildFolderTree()
     end
 
     function SaveManager:SetSubFolder(folder)
+        assert(typeof(folder) == "string", "subfolder must be a string")
+
+        folder = TrimString(folder):gsub("\\", "/"):gsub("^/+", ""):gsub("/+$", "")
+        assert(not folder:find("..", 1, true), "subfolder cannot contain '..'")
+
         self.SubFolder = folder
         self:BuildFolderTree()
     end
 
     function SaveManager:RegisterCustomData(key, saveFn, loadFn)
+        assert(typeof(key) == "string" and key ~= "", "custom data key must be a non-empty string")
+        assert(typeof(saveFn) == "function", "custom data save handler must be a function")
+        assert(typeof(loadFn) == "function", "custom data load handler must be a function")
+
         self.CustomData[key] = { Save = saveFn, Load = loadFn }
     end
 
     function SaveManager:Save(name)
-        if (not name) then
-            return false, "no config file is selected"
+        local normalizedName, nameErr = NormalizeConfigName(name)
+        if not normalizedName then
+            return false, nameErr
         end
-        SaveManager:CheckFolderTree()
+        if not self.Library then
+            return false, "library is not set"
+        end
+        if typeof(writefile) ~= "function" then
+            return false, "writefile is unavailable"
+        end
 
-        local fullPath = self.Folder .. "/settings/" .. name .. ".json"
-        if SaveManager:CheckSubFolder(true) then
-            fullPath = self.Folder .. "/settings/" .. self.SubFolder .. "/" .. name .. ".json"
+        local folderSuccess, folderErr = SaveManager:CheckFolderTree()
+        if not folderSuccess then
+            return false, folderErr
+        end
+
+        local fullPath, pathErr = self:GetConfigPath(normalizedName, true)
+        if not fullPath then
+            return false, pathErr
         end
 
         local data = {
@@ -261,17 +387,28 @@ local SaveManager = {} do
     end
 
     function SaveManager:Load(name)
-        if (not name) then
-            return false, "no config file is selected"
+        local normalizedName, nameErr = NormalizeConfigName(name)
+        if not normalizedName then
+            return false, nameErr
         end
-        SaveManager:CheckFolderTree()
-
-        local file = self.Folder .. "/settings/" .. name .. ".json"
-        if SaveManager:CheckSubFolder(true) then
-            file = self.Folder .. "/settings/" .. self.SubFolder .. "/" .. name .. ".json"
+        if not self.Library then
+            return false, "library is not set"
+        end
+        if typeof(readfile) ~= "function" then
+            return false, "readfile is unavailable"
         end
 
-        if not isfile(file) then return false, "invalid file" end
+        local folderSuccess, folderErr = SaveManager:CheckFolderTree()
+        if not folderSuccess then
+            return false, folderErr
+        end
+
+        local file, pathErr = self:GetConfigPath(normalizedName, true)
+        if not file then
+            return false, pathErr
+        end
+
+        if not SafeIsFile(file) then return false, "invalid file" end
 
         local readSuccess, raw = pcall(readfile, file)
         if not readSuccess then return false, "read file error" end
@@ -287,10 +424,12 @@ local SaveManager = {} do
             if not self.Parser[option.type] then continue end
             if self.Ignore[option.idx] then continue end
 
-            task.spawn(self.Parser[option.type].Load, option.idx, option)
+            task.spawn(function()
+                pcall(self.Parser[option.type].Load, option.idx, option)
+            end)
         end
 
-        if decoded.custom and next(self.CustomData) then
+        if typeof(decoded.custom) == "table" and next(self.CustomData) then
             for key, handler in self.CustomData do
                 if decoded.custom[key] ~= nil then
                     pcall(handler.Load, decoded.custom[key])
@@ -302,16 +441,25 @@ local SaveManager = {} do
     end
 
     function SaveManager:Delete(name)
-        if (not name) then
-            return false, "no config file is selected"
+        local normalizedName, nameErr = NormalizeConfigName(name)
+        if not normalizedName then
+            return false, nameErr
+        end
+        if typeof(delfile) ~= "function" then
+            return false, "delfile is unavailable"
         end
 
-        local file = self.Folder .. "/settings/" .. name .. ".json"
-        if SaveManager:CheckSubFolder(true) then
-            file = self.Folder .. "/settings/" .. self.SubFolder .. "/" .. name .. ".json"
+        local folderSuccess, folderErr = SaveManager:CheckFolderTree()
+        if not folderSuccess then
+            return false, folderErr
         end
 
-        if not isfile(file) then return false, "invalid file" end
+        local file, pathErr = self:GetConfigPath(normalizedName, true)
+        if not file then
+            return false, pathErr
+        end
+
+        if not SafeIsFile(file) then return false, "invalid file" end
 
         local success = pcall(delfile, file)
         if not success then return false, "delete file error" end
@@ -321,47 +469,32 @@ local SaveManager = {} do
 
     function SaveManager:RefreshConfigList()
         local success, data = pcall(function()
-            SaveManager:CheckFolderTree()
-
-            local list = {}
-            local out = {}
-
-            if SaveManager:CheckSubFolder(true) then
-                list = listfiles(self.Folder .. "/settings/" .. self.SubFolder)
-            else
-                list = listfiles(self.Folder .. "/settings")
+            local folderSuccess = SaveManager:CheckFolderTree()
+            if not folderSuccess then
+                return {}
             end
-            if typeof(list) ~= "table" then list = {} end
+
+            local out = {}
+            local settingsFolder = self:GetSettingsFolder(true)
+            if not settingsFolder then
+                return out
+            end
+            local list = SafeListFiles(settingsFolder)
 
             for i = 1, #list do
                 local file = list[i]
-                if file:sub(-5) == ".json" then
-                   
-
-                    local pos = file:find(".json", 1, true)
-                    local start = pos
-
-                    local char = file:sub(pos, pos)
-                    while char ~= "/" and char ~= "\\" and char ~= "" do
-                        pos = pos - 1
-                        char = file:sub(pos, pos)
-                    end
-
-                    if char == "/" or char == "\\" then
-                        table.insert(out, file:sub(pos + 1, start - 1))
-                    end
+                local basename = tostring(file):match("([^/\\]+)$") or tostring(file)
+                if basename:sub(-5) == ".json" and basename ~= "accountconfigs.json" then
+                    table.insert(out, basename:sub(1, #basename - 5))
                 end
             end
 
+            table.sort(out)
             return out
         end)
 
         if (not success) then
-            if self.Library then
-                self.Library:Notify("Failed to load config list: " .. tostring(data))
-            else
-                warn("Failed to load config list: " .. tostring(data))
-            end
+            Notify(self, "Failed to load config list: " .. tostring(data))
 
             return {}
         end
@@ -371,92 +504,124 @@ local SaveManager = {} do
 
     
     function SaveManager:GetAutoloadConfig()
-        SaveManager:CheckFolderTree()
-
-        local autoLoadPath = self.Folder .. "/settings/autoload.txt"
-        if SaveManager:CheckSubFolder(true) then
-            autoLoadPath = self.Folder .. "/settings/" .. self.SubFolder .. "/autoload.txt"
+        local folderSuccess = SaveManager:CheckFolderTree()
+        if not folderSuccess or typeof(readfile) ~= "function" then
+            return "none"
         end
 
-        if isfile(autoLoadPath) then
+        local settingsFolder = self:GetSettingsFolder(true)
+        if not settingsFolder then
+            return "none"
+        end
+        local autoLoadPath = settingsFolder .. "/autoload.txt"
+
+        if SafeIsFile(autoLoadPath) then
             local successRead, name = pcall(readfile, autoLoadPath)
             if not successRead then
                 return "none"
             end
 
-            name = tostring(name):match("^%s*(.-)%s*$")
-            return if name == "" then "none" else name
+            name = TrimString(name)
+            local normalizedName = NormalizeConfigName(name)
+            return if normalizedName then normalizedName else "none"
         end
 
         return "none"
     end
 
     function SaveManager:LoadAutoloadConfig()
-        SaveManager:CheckFolderTree()
+        local folderSuccess = SaveManager:CheckFolderTree()
+        if not folderSuccess then
+            Notify(self, "Failed to load autoload config: settings folder unavailable")
+            return
+        end
 
         local accountConfig = self:GetAccountConfig()
         if accountConfig then
             local success, err = self:Load(accountConfig)
             if not success then
-                self.Library:Notify("Failed to load account config: " .. err)
+                Notify(self, "Failed to load account config: " .. err)
                 return
             end
 
-            local playerName = game:GetService("Players").LocalPlayer.Name
-            self.Library:Notify(string.format("Auto loaded config %q for account %q", accountConfig, playerName))
+            local player = game:GetService("Players").LocalPlayer
+            local playerName = player and player.Name or "unknown"
+            Notify(self, string.format("Auto loaded config %q for account %q", accountConfig, playerName))
             return
         end
 
-        local autoLoadPath = self.Folder .. "/settings/autoload.txt"
-        if SaveManager:CheckSubFolder(true) then
-            autoLoadPath = self.Folder .. "/settings/" .. self.SubFolder .. "/autoload.txt"
+        if typeof(readfile) ~= "function" then
+            Notify(self, "Failed to load autoload config: readfile is unavailable")
+            return
         end
+        local settingsFolder = self:GetSettingsFolder(true)
+        if not settingsFolder then
+            Notify(self, "Failed to load autoload config: settings folder unavailable")
+            return
+        end
+        local autoLoadPath = settingsFolder .. "/autoload.txt"
 
-        if isfile(autoLoadPath) then
+        if SafeIsFile(autoLoadPath) then
             local successRead, name = pcall(readfile, autoLoadPath)
             if not successRead then
-                self.Library:Notify("Failed to load autoload config: read file error")
+                Notify(self, "Failed to load autoload config: read file error")
                 return
             end
 
-            name = tostring(name):match("^%s*(.-)%s*$")
-            if name == "" then
+            name = TrimString(name)
+            local normalizedName = NormalizeConfigName(name)
+            if not normalizedName then
                 return
             end
 
-            local success, err = self:Load(name)
+            local success, err = self:Load(normalizedName)
             if not success then
-                self.Library:Notify("Failed to load autoload config: " .. err)
+                Notify(self, "Failed to load autoload config: " .. err)
                 return
             end
 
-            self.Library:Notify(string.format("Auto loaded config %q", name))
+            Notify(self, string.format("Auto loaded config %q", normalizedName))
         end
     end
 
     function SaveManager:SaveAutoloadConfig(name)
-        SaveManager:CheckFolderTree()
-
-        local autoLoadPath = self.Folder .. "/settings/autoload.txt"
-        if SaveManager:CheckSubFolder(true) then
-            autoLoadPath = self.Folder .. "/settings/" .. self.SubFolder .. "/autoload.txt"
+        local normalizedName, nameErr = NormalizeConfigName(name)
+        if not normalizedName then
+            return false, nameErr
+        end
+        if typeof(writefile) ~= "function" then
+            return false, "writefile is unavailable"
         end
 
-        local success = pcall(writefile, autoLoadPath, name)
+        local folderSuccess, folderErr = SaveManager:CheckFolderTree()
+        if not folderSuccess then
+            return false, folderErr
+        end
+        local settingsFolder, settingsErr = self:GetSettingsFolder(true)
+        if not settingsFolder then
+            return false, settingsErr
+        end
+        local autoLoadPath = settingsFolder .. "/autoload.txt"
+
+        local success = pcall(writefile, autoLoadPath, normalizedName)
         if not success then return false, "write file error" end
 
         return true, ""
     end
 
     function SaveManager:GetAutoSaveState()
-        SaveManager:CheckFolderTree()
-
-        local path = self.Folder .. "/settings/autosave.txt"
-        if SaveManager:CheckSubFolder(true) then
-            path = self.Folder .. "/settings/" .. self.SubFolder .. "/autosave.txt"
+        local folderSuccess = SaveManager:CheckFolderTree()
+        if not folderSuccess or typeof(readfile) ~= "function" then
+            return false
         end
 
-        if isfile(path) then
+        local settingsFolder = self:GetSettingsFolder(true)
+        if not settingsFolder then
+            return false
+        end
+        local path = settingsFolder .. "/autosave.txt"
+
+        if SafeIsFile(path) then
             local ok, val = pcall(readfile, path)
             if ok and val == "true" then return true end
         end
@@ -465,24 +630,43 @@ local SaveManager = {} do
     end
 
     function SaveManager:SaveAutoSaveState(enabled)
-        SaveManager:CheckFolderTree()
-
-        local path = self.Folder .. "/settings/autosave.txt"
-        if SaveManager:CheckSubFolder(true) then
-            path = self.Folder .. "/settings/" .. self.SubFolder .. "/autosave.txt"
+        if typeof(writefile) ~= "function" then
+            return false, "writefile is unavailable"
         end
 
-        pcall(writefile, path, tostring(enabled))
+        local folderSuccess, folderErr = SaveManager:CheckFolderTree()
+        if not folderSuccess then
+            return false, folderErr
+        end
+        local settingsFolder, settingsErr = self:GetSettingsFolder(true)
+        if not settingsFolder then
+            return false, settingsErr
+        end
+        local path = settingsFolder .. "/autosave.txt"
+
+        local success = pcall(writefile, path, tostring(enabled))
+        if not success then return false, "write file error" end
+        return true
     end
 
     function SaveManager:DeleteAutoLoadConfig()
-        SaveManager:CheckFolderTree()
-
-        local autoLoadPath = self.Folder .. "/settings/autoload.txt"
-        if SaveManager:CheckSubFolder(true) then
-            autoLoadPath = self.Folder .. "/settings/" .. self.SubFolder .. "/autoload.txt"
+        if typeof(delfile) ~= "function" then
+            return false, "delfile is unavailable"
         end
 
+        local folderSuccess, folderErr = SaveManager:CheckFolderTree()
+        if not folderSuccess then
+            return false, folderErr
+        end
+        local settingsFolder, settingsErr = self:GetSettingsFolder(true)
+        if not settingsFolder then
+            return false, settingsErr
+        end
+        local autoLoadPath = settingsFolder .. "/autoload.txt"
+
+        if not SafeIsFile(autoLoadPath) then
+            return true, ""
+        end
         local success = pcall(delfile, autoLoadPath)
         if not success then return false, "delete file error" end
 
@@ -507,18 +691,22 @@ local SaveManager = {} do
     end
 
     function SaveManager:_HookElement(idx, element)
-        if self._autoSaveHooked[idx] then return end
+        if self._autoSaveHooked[idx] == element then return end
         if self.Ignore[idx] then return end
         if not element.Type or not self.Parser[element.Type] then return end
 
-        self._autoSaveHooked[idx] = true
+        self._autoSaveHooked[idx] = element
 
         local prevCallback = element.Callback
         element.Callback = function(...)
+            local callbackSuccess, callbackError = true, nil
             if prevCallback then
-                prevCallback(...)
+                callbackSuccess, callbackError = pcall(prevCallback, ...)
             end
             self:_QueueAutoSave()
+            if not callbackSuccess then
+                error(callbackError)
+            end
         end
 
         -- KeyPicker rebinding fires ChangedCallback/Changed but not Callback,
@@ -526,15 +714,21 @@ local SaveManager = {} do
         if element.Type == "KeyPicker" then
             local prevChangedCallback = element.ChangedCallback
             element.ChangedCallback = function(...)
+                local callbackSuccess, callbackError = true, nil
                 if prevChangedCallback then
-                    prevChangedCallback(...)
+                    callbackSuccess, callbackError = pcall(prevChangedCallback, ...)
                 end
                 self:_QueueAutoSave()
+                if not callbackSuccess then
+                    error(callbackError)
+                end
             end
         end
     end
 
     function SaveManager:SetupAutoSave()
+        assert(self.Library, "Must set SaveManager.Library")
+
         for idx, toggle in self.Library.Toggles do
             self:_HookElement(idx, toggle)
         end
@@ -585,17 +779,18 @@ local SaveManager = {} do
     end
 
     function SaveManager:_GetAccountConfigsPath()
-        local path = self.Folder .. "/settings/accountconfigs.json"
-        if SaveManager:CheckSubFolder(false) then
-            path = self.Folder .. "/settings/" .. self.SubFolder .. "/accountconfigs.json"
-        end
-        return path
+        local settingsFolder = self:GetSettingsFolder(false)
+        return settingsFolder .. "/accountconfigs.json"
     end
 
     function SaveManager:GetAccountConfigs()
-        SaveManager:CheckFolderTree()
+        local folderSuccess = SaveManager:CheckFolderTree()
+        if not folderSuccess or typeof(readfile) ~= "function" then
+            return {}
+        end
+
         local path = self:_GetAccountConfigsPath()
-        if not isfile(path) then return {} end
+        if not SafeIsFile(path) then return {} end
 
         local ok, raw = pcall(readfile, path)
         if not ok then return {} end
@@ -607,8 +802,20 @@ local SaveManager = {} do
     end
 
     function SaveManager:SaveAccountConfigs(data)
-        SaveManager:CheckFolderTree()
-        SaveManager:CheckSubFolder(true)
+        if typeof(data) ~= "table" then
+            return false
+        end
+        if typeof(writefile) ~= "function" then
+            return false
+        end
+
+        local folderSuccess = SaveManager:CheckFolderTree()
+        if not folderSuccess then
+            return false
+        end
+        if not self:GetSettingsFolder(true) then
+            return false
+        end
 
         local ok, encoded = pcall(HttpService.JSONEncode, HttpService, data)
         if not ok then return false end
@@ -621,14 +828,23 @@ local SaveManager = {} do
 
     function SaveManager:GetAccountConfig()
         local configs = self:GetAccountConfigs()
-        local playerName = game:GetService("Players").LocalPlayer.Name
+        local player = game:GetService("Players").LocalPlayer
+        if not player then
+            return nil
+        end
+
+        local playerName = player.Name
         return configs[playerName]
     end
 
     function SaveManager:_BuildAccountListItems(configs)
         local items = {}
+        if typeof(configs) ~= "table" then
+            return items
+        end
+
         for account, config in configs do
-            table.insert(items, { Key = account, Display = account .. " → " .. config })
+            table.insert(items, { Key = tostring(account), Display = tostring(account) .. " -> " .. tostring(config) })
         end
         table.sort(items, function(a, b) return a.Key < b.Key end)
         return items
@@ -636,25 +852,27 @@ local SaveManager = {} do
 
     function SaveManager:BuildConfigSection(tab)
         assert(self.Library, "Must set SaveManager.Library")
+        assert(self.Library.Window, "Must create a Library window before building the config section")
 
         local section = tab:AddRightGroupbox("Configuration", "folder-cog")
 
         section:AddInput("SaveManager_ConfigName",    { Text = "Config name" })
         section:AddButton("Create config", function()
-            local name = self.Library.Options.SaveManager_ConfigName.Value
+            local name = TrimString(self.Library.Options.SaveManager_ConfigName.Value)
 
-            if name:gsub(" ", "") == "" then
-                self.Library:Notify("Invalid config name (empty)", 2)
+            local normalizedName, nameErr = NormalizeConfigName(name)
+            if not normalizedName then
+                self.Library:Notify("Invalid config name: " .. nameErr, 2)
                 return
             end
 
-            local success, err = self:Save(name)
+            local success, err = self:Save(normalizedName)
             if not success then
                 self.Library:Notify("Failed to create config: " .. err)
                 return
             end
 
-            self.Library:Notify(string.format("Created config %q", name))
+            self.Library:Notify(string.format("Created config %q", normalizedName))
             self.Library.Options.SaveManager_ConfigList:SetValues(self:RefreshConfigList())
             self.Library.Options.SaveManager_ConfigList:SetValue(nil)
         end)
@@ -734,6 +952,8 @@ local SaveManager = {} do
 
         self.AutoloadConfigLabel = section:AddLabel("Current autoload config: " .. self:GetAutoloadConfig(), true)
 
+        self:SetIgnoreIndexes({ "SaveManager_ConfigList", "SaveManager_ConfigName", "SaveManager_ImportData", "SaveManager_AutoSave", "SaveManager_AccName", "SaveManager_AccConfig", "SaveManager_AccList" })
+
         local savedAutoSave = self:GetAutoSaveState()
         local autoSaveConfig = self:GetAutoloadConfig()
 
@@ -742,7 +962,10 @@ local SaveManager = {} do
             Default = savedAutoSave,
             Callback = function(value)
                 self.AutoSave = value
-                self:SaveAutoSaveState(value)
+                local savedState, saveStateErr = self:SaveAutoSaveState(value)
+                if not savedState then
+                    self.Library:Notify("Failed to save auto-save state: " .. tostring(saveStateErr), 2)
+                end
                 if value then
                     self:SetupAutoSave()
                     local name = self:GetAutoloadConfig()
@@ -763,7 +986,8 @@ local SaveManager = {} do
         do
             local Window = self.Library.Window
             local accountConfigs = self:GetAccountConfigs()
-            local playerName = game:GetService("Players").LocalPlayer.Name
+            local localPlayer = game:GetService("Players").LocalPlayer
+            local playerName = localPlayer and localPlayer.Name or ""
 
             local Dialog
             Dialog = Window:AddDialog("SaveManager_AccountConfigs", {
@@ -792,9 +1016,15 @@ local SaveManager = {} do
                             end
 
                             accountConfigs[account] = config
-                            self:SaveAccountConfigs(accountConfigs)
+                            if not self:SaveAccountConfigs(accountConfigs) then
+                                self.Library:Notify("Failed to save account configs", 2)
+                                return
+                            end
                             self.Library.Options.SaveManager_AccList:SetItems(self:_BuildAccountListItems(accountConfigs))
-                            self.Library:Notify(string.format("Assigned %q → %q", account, config))
+                            if account == playerName and self.AccountConfigLabel then
+                                self.AccountConfigLabel:SetText("Account config: " .. config)
+                            end
+                            self.Library:Notify(string.format("Assigned %q -> %q", account, config))
                         end,
                     },
                     Remove = {
@@ -810,9 +1040,15 @@ local SaveManager = {} do
 
                             local account = sel.Key
                             accountConfigs[account] = nil
-                            self:SaveAccountConfigs(accountConfigs)
+                            if not self:SaveAccountConfigs(accountConfigs) then
+                                self.Library:Notify("Failed to save account configs", 2)
+                                return
+                            end
                             self.Library.Options.SaveManager_AccList:SetItems(self:_BuildAccountListItems(accountConfigs))
                             self.Library.Options.SaveManager_AccList:ClearSelection()
+                            if account == playerName and self.AccountConfigLabel then
+                                self.AccountConfigLabel:SetText("Account config: none")
+                            end
                             self.Library:Notify(string.format("Removed account %q", account))
                         end,
                     },
@@ -834,6 +1070,7 @@ local SaveManager = {} do
                 MaxHeight = 120,
                 EmptyText = "No accounts assigned yet.",
                 Callback = function(item)
+                    if not item then return end
                     self.Library.Options.SaveManager_AccName:SetValue(item.Key)
                 end,
             })
@@ -890,8 +1127,13 @@ local SaveManager = {} do
                 return
             end
 
-            if setclipboard then
-                setclipboard(encoded)
+            if typeof(setclipboard) == "function" then
+                local clipboardOk = pcall(setclipboard, encoded)
+                if not clipboardOk then
+                    self.Library:Notify("Failed to copy config to clipboard")
+                    return
+                end
+
                 self.Library:Notify("Config exported to clipboard")
             else
                 self.Library:Notify("Clipboard not supported")
@@ -911,16 +1153,31 @@ local SaveManager = {} do
 
             if raw:sub(1, 4) == "http" then
                 self.Library:Notify("Fetching config from URL...")
-                local ok, response = pcall(request, { Url = raw, Method = "GET" })
-                if not ok or not response.Success then
-                    self.Library:Notify("Failed to fetch URL: " .. (ok and response.StatusMessage or tostring(response)))
+                if typeof(request) ~= "function" then
+                    self.Library:Notify("HTTP request is not supported")
                     return
                 end
-                raw = response.Body
+
+                local ok, response = pcall(request, { Url = raw, Method = "GET" })
+                local statusCode = ok and typeof(response) == "table" and tonumber(response.StatusCode) or nil
+                local requestSuccess = ok
+                    and typeof(response) == "table"
+                    and (response.Success == true or (statusCode and statusCode >= 200 and statusCode < 300))
+
+                if not requestSuccess then
+                    local message = ok and typeof(response) == "table" and (response.StatusMessage or response.StatusCode) or response
+                    self.Library:Notify("Failed to fetch URL: " .. tostring(message))
+                    return
+                end
+                raw = response.Body or response.body
+                if typeof(raw) ~= "string" then
+                    self.Library:Notify("URL response did not contain config data")
+                    return
+                end
             end
 
             local success, decoded = pcall(HttpService.JSONDecode, HttpService, raw)
-            if not success or typeof(decoded) ~= "table" or not decoded.objects then
+            if not success or typeof(decoded) ~= "table" or typeof(decoded.objects) ~= "table" then
                 self.Library:Notify("Invalid config data")
                 return
             end
@@ -930,10 +1187,12 @@ local SaveManager = {} do
                 if not self.Parser[option.type] then continue end
                 if self.Ignore[option.idx] then continue end
 
-                task.spawn(self.Parser[option.type].Load, option.idx, option)
+                task.spawn(function()
+                    pcall(self.Parser[option.type].Load, option.idx, option)
+                end)
             end
 
-            if decoded.custom and next(self.CustomData) then
+            if typeof(decoded.custom) == "table" and next(self.CustomData) then
                 for key, handler in self.CustomData do
                     if decoded.custom[key] ~= nil then
                         pcall(handler.Load, decoded.custom[key])
