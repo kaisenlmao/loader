@@ -65,8 +65,9 @@ local SaveManager = {} do
             end,
             Load = function(idx, data)
                 local object = SaveManager.Library.Options[idx]
-                if object and object.Value ~= data.value then
-                    object:SetValue(data.value)
+                local numValue = tonumber(data.value)
+                if object and numValue and object.Value ~= numValue then
+                    object:SetValue(numValue)
                 end
             end,
         },
