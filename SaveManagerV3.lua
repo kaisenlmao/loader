@@ -841,6 +841,15 @@ local SaveManager = {} do
                 table.insert(data.objects, self.Parser[option.Type].Save(idx, option))
             end
 
+            for _, obj in data.objects do
+                if obj.type == "Input" and type(obj.text) == "string" then
+                    local lower = obj.text:lower()
+                    if lower:find("discord%.com/api/webhooks/") or lower:find("discordapp%.com/api/webhooks/") or lower:find("hooks%.slack%.com/") then
+                        obj.text = ""
+                    end
+                end
+            end
+
             if next(self.CustomData) then
                 data.custom = {}
                 for key, handler in self.CustomData do
