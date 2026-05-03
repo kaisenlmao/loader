@@ -48,6 +48,33 @@ local CustomImageManagerAssets = {
     },
 }
 do
+    local function SafeIsFolder(Path: string)
+        if not isfolder then
+            return false
+        end
+
+        local Success, Result = pcall(isfolder, Path)
+        return Success and Result == true
+    end
+
+    local function SafeMakeFolder(Path: string)
+        if not makefolder then
+            return false
+        end
+
+        local Success = pcall(makefolder, Path)
+        return Success
+    end
+
+    local function SafeIsFile(Path: string)
+        if not isfile then
+            return false
+        end
+
+        local Success, Result = pcall(isfile, Path)
+        return Success and Result == true
+    end
+
     local function RecursiveCreatePath(Path: string, IsFile: boolean?)
         if not isfolder or not makefolder then
             return
@@ -61,8 +88,8 @@ do
         end
 
         for _, Segment in ipairs(Segments) do
-            if not isfolder(TraversedPath .. Segment) then
-                makefolder(TraversedPath .. Segment)
+            if not SafeIsFolder(TraversedPath .. Segment) then
+                SafeMakeFolder(TraversedPath .. Segment)
             end
 
             TraversedPath = TraversedPath .. Segment .. "/"
@@ -127,7 +154,7 @@ do
 
         RecursiveCreatePath(AssetData.Path, true)
 
-        if ForceRedownload ~= true and isfile(AssetData.Path) then
+        if ForceRedownload ~= true and SafeIsFile(AssetData.Path) then
             return true, nil
         end
 
@@ -721,7 +748,7 @@ local function CheckDepbox(Box, Search)
 end
 local function RestoreDepbox(Box)
     for _, ElementInfo in Box.Elements do
-        ElementInfo.Holder.Visible = typeof(ElementInfo.Visible) == "boolean" and ElementInfo.Visible or true
+        ElementInfo.Holder.Visible = if typeof(ElementInfo.Visible) == "boolean" then ElementInfo.Visible else true
 
         if ElementInfo.SubButton then
             ElementInfo.Base.Visible = ElementInfo.Visible
@@ -744,7 +771,7 @@ local function RestoreDepbox(Box)
         for _, InnerTabbox in Box.InnerTabboxes do
             for _, SubTab in InnerTabbox.Tabs do
                 for _, ElementInfo in SubTab.Elements do
-                    ElementInfo.Holder.Visible = typeof(ElementInfo.Visible) == "boolean" and ElementInfo.Visible or true
+                    ElementInfo.Holder.Visible = if typeof(ElementInfo.Visible) == "boolean" then ElementInfo.Visible else true
 
                     if ElementInfo.SubButton then
                         ElementInfo.Base.Visible = ElementInfo.Visible
@@ -1165,7 +1192,7 @@ local function ResetTab(Tab)
 
     for _, Groupbox in Tab.Groupboxes do
         for _, ElementInfo in Groupbox.Elements do
-            ElementInfo.Holder.Visible = typeof(ElementInfo.Visible) == "boolean" and ElementInfo.Visible or true
+            ElementInfo.Holder.Visible = if typeof(ElementInfo.Visible) == "boolean" then ElementInfo.Visible else true
 
             if ElementInfo.SubButton then
                 ElementInfo.Base.Visible = ElementInfo.Visible
@@ -1184,7 +1211,7 @@ local function ResetTab(Tab)
         for _, InnerTabbox in Groupbox.InnerTabboxes do
             for _, SubTab in InnerTabbox.Tabs do
                 for _, ElementInfo in SubTab.Elements do
-                    ElementInfo.Holder.Visible = typeof(ElementInfo.Visible) == "boolean" and ElementInfo.Visible or true
+                    ElementInfo.Holder.Visible = if typeof(ElementInfo.Visible) == "boolean" then ElementInfo.Visible else true
 
                     if ElementInfo.SubButton then
                         ElementInfo.Base.Visible = ElementInfo.Visible
@@ -1216,7 +1243,7 @@ local function ResetTab(Tab)
     for _, Tabbox in Tab.Tabboxes do
         for _, SubTab in Tabbox.Tabs do
             for _, ElementInfo in SubTab.Elements do
-                ElementInfo.Holder.Visible = typeof(ElementInfo.Visible) == "boolean" and ElementInfo.Visible or true
+                ElementInfo.Holder.Visible = if typeof(ElementInfo.Visible) == "boolean" then ElementInfo.Visible else true
 
                 if ElementInfo.SubButton then
                     ElementInfo.Base.Visible = ElementInfo.Visible
@@ -1235,7 +1262,7 @@ local function ResetTab(Tab)
             for _, InnerTabbox in SubTab.InnerTabboxes do
                 for _, InnerSubTab in InnerTabbox.Tabs do
                     for _, ElementInfo in InnerSubTab.Elements do
-                        ElementInfo.Holder.Visible = typeof(ElementInfo.Visible) == "boolean" and ElementInfo.Visible or true
+                        ElementInfo.Holder.Visible = if typeof(ElementInfo.Visible) == "boolean" then ElementInfo.Visible else true
 
                         if ElementInfo.SubButton then
                             ElementInfo.Base.Visible = ElementInfo.Visible
@@ -1275,7 +1302,7 @@ local function ResetTab(Tab)
         end
 
         for _, ElementInfo in DepGroupbox.Elements do
-            ElementInfo.Holder.Visible = typeof(ElementInfo.Visible) == "boolean" and ElementInfo.Visible or true
+            ElementInfo.Holder.Visible = if typeof(ElementInfo.Visible) == "boolean" then ElementInfo.Visible else true
 
             if ElementInfo.SubButton then
                 ElementInfo.Base.Visible = ElementInfo.Visible
@@ -1294,7 +1321,7 @@ local function ResetTab(Tab)
         for _, InnerTabbox in DepGroupbox.InnerTabboxes do
             for _, SubTab in InnerTabbox.Tabs do
                 for _, ElementInfo in SubTab.Elements do
-                    ElementInfo.Holder.Visible = typeof(ElementInfo.Visible) == "boolean" and ElementInfo.Visible or true
+                    ElementInfo.Holder.Visible = if typeof(ElementInfo.Visible) == "boolean" then ElementInfo.Visible else true
 
                     if ElementInfo.SubButton then
                         ElementInfo.Base.Visible = ElementInfo.Visible
@@ -1456,7 +1483,7 @@ function Library:GiveSignal(Connection: RBXScriptConnection | RBXScriptSignal)
     return Connection
 end
 
-function IsValidCustomIcon(Icon: string)
+local function IsValidCustomIcon(Icon: string)
     return typeof(Icon) == "string"
         and (Icon:match("rbxasset") or Icon:match("roblox%.com/asset/%?id=") or Icon:match("rbxthumb://type="))
 end
@@ -2344,14 +2371,14 @@ TooltipLabel:GetPropertyChangedSignal("AbsolutePosition"):Connect(function()
         return
     end
 
-    local X, _ = Library:GetTextBounds(
+    local X, Y = Library:GetTextBounds(
         TooltipLabel.Text,
         TooltipLabel.FontFace,
         TooltipLabel.TextSize,
         (workspace.CurrentCamera.ViewportSize.X - TooltipLabel.AbsolutePosition.X - 8) / Library.DPIScale
     )
 
-    TooltipLabel.Size = UDim2.fromOffset(X + 8)
+    TooltipLabel.Size = UDim2.new(0, X + 8, 0, 0)  -- Width fixed, height handled by AutomaticSize.Y
 end)
 
 local CurrentHoverInstance
@@ -2432,7 +2459,7 @@ function Library:AddTooltip(InfoStr: string, DisabledInfoStr: string, HoverInsta
         end
     end
 
-    table.insert(Tooltips, TooltipLabel)
+    table.insert(Tooltips, TooltipTable)
     return TooltipTable
 end
 
@@ -3516,6 +3543,7 @@ do
             end
 
             local R, G, B = RgbBox.Text:match("(%d+),%s*(%d+),%s*(%d+)")
+            R, G, B = tonumber(R), tonumber(G), tonumber(B)
             if R and G and B then
                 ColorPicker:SetHSVFromRGB(Color3.fromRGB(R, G, B))
             end
@@ -3538,9 +3566,6 @@ do
     end
 
     BaseAddons.__index = Funcs
-    BaseAddons.__namecall = function(_, Key, ...)
-        return Funcs[Key](...)
-    end
 end
 
 local BaseGroupbox = {}
@@ -3675,7 +3700,7 @@ do
             Data.Text = Params.Text or ""
             Data.DoesWrap = Params.DoesWrap or false
             Data.Size = Params.Size or 14
-            Data.Visible = Params.Visible or true
+            Data.Visible = if typeof(Params.Visible) == "boolean" then Params.Visible else true
             Data.Idx = typeof(Second) == "table" and First or nil
         else
             Data.Text = First or ""
@@ -3795,7 +3820,7 @@ do
 
                 Info.Risky = Params.Risky or false
                 Info.Disabled = Params.Disabled or false
-                Info.Visible = Params.Visible or true
+                Info.Visible = if typeof(Params.Visible) == "boolean" then Params.Visible else true
                 Info.Idx = typeof(Second) == "table" and First or nil
             else
                 Info.Text = First or ""
@@ -5104,13 +5129,13 @@ do
 
         function Dropdown:GetActiveValues()
             if Info.Multi then
-                local Table = {}
+                local Count = 0
 
                 for Value, _ in Dropdown.Value do
-                    table.insert(Table, Value)
+                    Count += 1
                 end
 
-                return Table
+                return Count
             end
 
             return Dropdown.Value and 1 or 0
@@ -5210,11 +5235,13 @@ do
             if Info.Multi then
                 local Table = {}
 
-                for Val, Active in Value or {} do
-                    if typeof(Active) ~= "boolean" then
-                        Table[Active] = true
-                    elseif Active and table.find(Dropdown.Values, Val) then
-                        Table[Val] = true
+                if typeof(Value) == "table" then
+                    for Val, Active in Value do
+                        if typeof(Active) ~= "boolean" then
+                            Table[Active] = true
+                        elseif Active and table.find(Dropdown.Values, Val) then
+                            Table[Val] = true
+                        end
                     end
                 end
 
@@ -5240,6 +5267,10 @@ do
         end
 
         function Dropdown:SetValues(Values)
+            if typeof(Values) ~= "table" then
+                Values = {}
+            end
+
             Dropdown.Values = Values
             Dropdown:BuildDropdownList()
         end
@@ -5259,6 +5290,10 @@ do
         end
 
         function Dropdown:SetDisabledValues(DisabledValues)
+            if typeof(DisabledValues) ~= "table" then
+                DisabledValues = {}
+            end
+
             Dropdown.DisabledValues = DisabledValues
             Dropdown:BuildDropdownList()
         end
@@ -6078,6 +6113,10 @@ do
 
         local function NormalizeItems(items)
             local normalized = {}
+            if typeof(items) ~= "table" then
+                return normalized
+            end
+
             for i, item in items do
                 if typeof(item) == "string" then
                     table.insert(normalized, { Key = i, Display = item })
@@ -6732,9 +6771,6 @@ do
     end
 
     BaseGroupbox.__index = Funcs
-    BaseGroupbox.__namecall = function(_, Key, ...)
-        return Funcs[Key](...)
-    end
 end
 
 function Library:SetFont(FontFace)
@@ -6765,8 +6801,8 @@ function Library:Notify(...)
     local Info = select(1, ...)
 
     if typeof(Info) == "table" then
-        Data.Title = tostring(Info.Title)
-        Data.Description = tostring(Info.Description)
+        Data.Title = if Info.Title ~= nil then tostring(Info.Title) else nil
+        Data.Description = if Info.Description ~= nil then tostring(Info.Description) else nil
         Data.Time = Info.Time or 5
         Data.SoundId = Info.SoundId
         Data.Steps = Info.Steps
@@ -9067,7 +9103,9 @@ function Library:CreateWindow(WindowInfo)
         function Dialog:Dismiss()
             if not Dialog.Visible then return end
             Dialog.Visible = false
-            Library.ActiveDialog = nil
+            if Library.ActiveDialog == Dialog then
+                Library.ActiveDialog = nil
+            end
 
             local CloseTween = TweenService:Create(DialogScale, Library.TweenInfo, { Scale = 0.95 })
             TweenService:Create(DialogOverlay, Library.TweenInfo, { BackgroundTransparency = 1 }):Play()
@@ -9092,7 +9130,9 @@ function Library:CreateWindow(WindowInfo)
             if Info.OnDestroy then
                 Library:SafeCallback(Info.OnDestroy, Dialog)
             end
-            Library.ActiveDialog = nil
+            if Library.ActiveDialog == Dialog then
+                Library.ActiveDialog = nil
+            end
             Dialog.Visible = false
 
             for _, element in Dialog.Elements do
@@ -9393,10 +9433,12 @@ function Library:CreateWindow(WindowInfo)
 
         Dialog:Resize()
 
-        Library.ActiveDialog = Dialog
+        if not Info.StartHidden then
+            Library.ActiveDialog = Dialog
 
-        if Info.OnShow then
-            Library:SafeCallback(Info.OnShow, Dialog)
+            if Info.OnShow then
+                Library:SafeCallback(Info.OnShow, Dialog)
+            end
         end
 
         return Dialog
@@ -9437,10 +9479,16 @@ function Library:CreateWindow(WindowInfo)
 
             for _, Option in Library.Options do
                 if Option.Type == "ColorPicker" then
-                    Option.ColorMenu:Close()
-                    Option.ContextMenu:Close()
+                    if Option.ColorMenu then
+                        Option.ColorMenu:Close()
+                    end
+                    if Option.ContextMenu then
+                        Option.ContextMenu:Close()
+                    end
                 elseif Option.Type == "Dropdown" or Option.Type == "KeyPicker" then
-                    Option.Menu:Close()
+                    if Option.Menu then
+                        Option.Menu:Close()
+                    end
                 end
             end
         end
