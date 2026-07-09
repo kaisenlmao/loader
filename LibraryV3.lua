@@ -185,6 +185,7 @@ local Library = {
 
     NotifySide = "Right",
     ShowCustomCursor = false,
+    ShowCursorBinding = string.sub(tostring({}), 10),
     ForceCheckbox = false,
     ShowToggleFrameInKeybinds = true,
     NotifyOnError = false,
@@ -357,12 +358,14 @@ local Templates = {
         Finished = false,
         Numeric = false,
         ClearTextOnFocus = true,
+        ClearTextOnBlur = false,
         Placeholder = "",
         AllowEmpty = true,
         EmptyReset = "---",
 
         Callback = function() end,
         Changed = function() end,
+        VerifyValue = nil,
 
         Disabled = false,
         Visible = true,
@@ -432,8 +435,15 @@ local Templates = {
     --// Addons \\-
     KeyPicker = {
         Text = "KeyPicker",
+
         Default = "None",
         DefaultModifiers = {},
+
+        Blacklisted = {},
+        BlacklistedModifiers = {},
+        Whitelisted = {},
+        WhitelistedModifiers = {},
+
         Mode = "Toggle",
         Modes = { "Always", "Toggle", "Hold" },
         SyncToggleState = false,
@@ -721,7 +731,7 @@ local function CheckDepbox(Box, Search)
 end
 local function RestoreDepbox(Box)
     for _, ElementInfo in Box.Elements do
-        ElementInfo.Holder.Visible = typeof(ElementInfo.Visible) == "boolean" and ElementInfo.Visible or true
+        ElementInfo.Holder.Visible = ElementInfo.Visible ~= false
 
         if ElementInfo.SubButton then
             ElementInfo.Base.Visible = ElementInfo.Visible
@@ -744,7 +754,7 @@ local function RestoreDepbox(Box)
         for _, InnerTabbox in Box.InnerTabboxes do
             for _, SubTab in InnerTabbox.Tabs do
                 for _, ElementInfo in SubTab.Elements do
-                    ElementInfo.Holder.Visible = typeof(ElementInfo.Visible) == "boolean" and ElementInfo.Visible or true
+                    ElementInfo.Holder.Visible = ElementInfo.Visible ~= false
 
                     if ElementInfo.SubButton then
                         ElementInfo.Base.Visible = ElementInfo.Visible
@@ -780,6 +790,11 @@ local function ApplySearchToTab(Tab, Search)
 
     --// Loop through Groupboxes to get Elements Info
     for _, Groupbox in Tab.Groupboxes do
+        if Groupbox.Visible == false then
+            Groupbox.BoxHolder.Visible = false
+            continue
+        end
+
         local VisibleElements = 0
 
         for _, ElementInfo in Groupbox.Elements do
@@ -1165,7 +1180,7 @@ local function ResetTab(Tab)
 
     for _, Groupbox in Tab.Groupboxes do
         for _, ElementInfo in Groupbox.Elements do
-            ElementInfo.Holder.Visible = typeof(ElementInfo.Visible) == "boolean" and ElementInfo.Visible or true
+            ElementInfo.Holder.Visible = ElementInfo.Visible ~= false
 
             if ElementInfo.SubButton then
                 ElementInfo.Base.Visible = ElementInfo.Visible
@@ -1184,7 +1199,7 @@ local function ResetTab(Tab)
         for _, InnerTabbox in Groupbox.InnerTabboxes do
             for _, SubTab in InnerTabbox.Tabs do
                 for _, ElementInfo in SubTab.Elements do
-                    ElementInfo.Holder.Visible = typeof(ElementInfo.Visible) == "boolean" and ElementInfo.Visible or true
+                    ElementInfo.Holder.Visible = ElementInfo.Visible ~= false
 
                     if ElementInfo.SubButton then
                         ElementInfo.Base.Visible = ElementInfo.Visible
@@ -1210,13 +1225,13 @@ local function ResetTab(Tab)
         end
 
         Groupbox:Resize()
-        Groupbox.BoxHolder.Visible = true
+        Groupbox.BoxHolder.Visible = Groupbox.Visible ~= false
     end
 
     for _, Tabbox in Tab.Tabboxes do
         for _, SubTab in Tabbox.Tabs do
             for _, ElementInfo in SubTab.Elements do
-                ElementInfo.Holder.Visible = typeof(ElementInfo.Visible) == "boolean" and ElementInfo.Visible or true
+                ElementInfo.Holder.Visible = ElementInfo.Visible ~= false
 
                 if ElementInfo.SubButton then
                     ElementInfo.Base.Visible = ElementInfo.Visible
@@ -1235,7 +1250,7 @@ local function ResetTab(Tab)
             for _, InnerTabbox in SubTab.InnerTabboxes do
                 for _, InnerSubTab in InnerTabbox.Tabs do
                     for _, ElementInfo in InnerSubTab.Elements do
-                        ElementInfo.Holder.Visible = typeof(ElementInfo.Visible) == "boolean" and ElementInfo.Visible or true
+                        ElementInfo.Holder.Visible = ElementInfo.Visible ~= false
 
                         if ElementInfo.SubButton then
                             ElementInfo.Base.Visible = ElementInfo.Visible
@@ -1275,7 +1290,7 @@ local function ResetTab(Tab)
         end
 
         for _, ElementInfo in DepGroupbox.Elements do
-            ElementInfo.Holder.Visible = typeof(ElementInfo.Visible) == "boolean" and ElementInfo.Visible or true
+            ElementInfo.Holder.Visible = ElementInfo.Visible ~= false
 
             if ElementInfo.SubButton then
                 ElementInfo.Base.Visible = ElementInfo.Visible
@@ -1294,7 +1309,7 @@ local function ResetTab(Tab)
         for _, InnerTabbox in DepGroupbox.InnerTabboxes do
             for _, SubTab in InnerTabbox.Tabs do
                 for _, ElementInfo in SubTab.Elements do
-                    ElementInfo.Holder.Visible = typeof(ElementInfo.Visible) == "boolean" and ElementInfo.Visible or true
+                    ElementInfo.Holder.Visible = ElementInfo.Visible ~= false
 
                     if ElementInfo.SubButton then
                         ElementInfo.Base.Visible = ElementInfo.Visible
@@ -1445,6 +1460,7 @@ function Library:SetDPIScale(DPIScale: number)
     for _, Notification in Library.Notifications do
         Notification:Resize()
     end
+    Library:UpdateNotificationPositions(true)
 end
 
 function Library:GiveSignal(Connection: RBXScriptConnection | RBXScriptSignal)
@@ -1492,10 +1508,9 @@ function Library:GetIcon(IconName: string)
     return Icon
 end
 
-function Library:GetCustomIcon(IconName: string)
-    if not IsValidCustomIcon(IconName) then
-        return Library:GetIcon(IconName)
-    else
+function Library:GetCustomIcon(IconName: string): any
+    local CustomIcon = IsValidCustomIcon(IconName)
+    if CustomIcon then
         return {
             Url = IconName,
             ImageRectOffset = Vector2.zero,
@@ -1503,6 +1518,22 @@ function Library:GetCustomIcon(IconName: string)
             Custom = true,
         }
     end
+
+    local LucideIcon = Library:GetIcon(IconName)
+    if LucideIcon then
+        return LucideIcon
+    end
+
+    if tonumber(IconName) then
+        return {
+            Url = string.format("rbxassetid://%s", tostring(IconName)),
+            ImageRectOffset = Vector2.zero,
+            ImageRectSize = Vector2.zero,
+            Custom = true,
+        }
+    end
+
+    return nil
 end
 
 function Library:Validate(Table: { [string]: any }, Template: { [string]: any }): { [string]: any }
@@ -1530,15 +1561,14 @@ local function FillInstance(Table: { [string]: any }, Instance: GuiObject)
     local ThemeProperties = Library.Registry[Instance] or {}
 
     for key, value in Table do
-        if ThemeProperties[key] then
-            ThemeProperties[key] = nil
-        
-        elseif key ~= "Text" then
+        if key ~= "Text" then
             local SchemeValue = GetSchemeValue(value)
 
             if SchemeValue or typeof(value) == "function" then
                 ThemeProperties[key] = value
                 value = SchemeValue or value()
+            else
+                ThemeProperties[key] = nil
             end
         end
 
@@ -1670,7 +1700,6 @@ end
 
 --// Notification
 local NotificationArea
-local NotificationList
 do
     NotificationArea = New("Frame", {
         AnchorPoint = Vector2.new(1, 0),
@@ -1685,12 +1714,32 @@ do
             Parent = NotificationArea,
         })
     )
+end
 
-    NotificationList = New("UIListLayout", {
-        HorizontalAlignment = Enum.HorizontalAlignment.Right,
-        Padding = UDim.new(0, 8),
-        Parent = NotificationArea,
-    })
+Library.NotifyOrder = {}
+
+function Library:UpdateNotificationPositions(Snap)
+    local Left = Library.NotifySide:lower() == "left"
+    local XScale = Left and 0 or 1
+    local RunningY = 0
+
+    for _, FakeBg in Library.NotifyOrder do
+        local Data = Library.Notifications[FakeBg]
+        if Data and FakeBg.Parent then
+            local Target = UDim2.new(XScale, 0, 0, RunningY)
+
+            if Snap or not Data.PositionInitialized then
+                FakeBg.Position = Target
+                Data.PositionInitialized = true
+            elseif FakeBg.Position ~= Target then
+                TweenService:Create(FakeBg, Library.NotifyTweenInfo, {
+                    Position = Target,
+                }):Play()
+            end
+
+            RunningY += FakeBg.AbsoluteSize.Y + 8
+        end
+    end
 end
 
 --// Lib Functions \\--
@@ -2029,10 +2078,10 @@ function Library:AddDraggableLabel(Text: string)
     return Table
 end
 
-function Library:AddDraggableButton(Text: string, Func, ExcludeScaling: boolean?)
+function Library:AddDraggableButton(Text: string, Func, ExcludeScaling: boolean?, ExcludeDragging: boolean?)
     local Table = {}
 
-    local Button = New("TextButton", {
+    local Button: TextButton = New("TextButton", {
         BackgroundColor3 = "BackgroundColor",
         Position = UDim2.fromOffset(6, 6),
         TextSize = 16,
@@ -2056,9 +2105,34 @@ function Library:AddDraggableButton(Text: string, Func, ExcludeScaling: boolean?
     end
     Library:AddOutline(Button)
 
-    Button.MouseButton1Click:Connect(function()
-        Library:SafeCallback(Func, Table)
+    local DragThreshold = if ExcludeDragging then 0.25 else math.huge
+    Button.InputBegan:Connect(function(Input: InputObject)
+        if not IsClickInput(Input) then
+            return
+        end
+
+        local Start = tick()
+
+        local Changed
+        Changed = Input.Changed:Connect(function()
+            if Input.UserInputState ~= Enum.UserInputState.End then
+                return
+            end
+
+            local IsLikelyDragging = tick() - Start > DragThreshold
+            if IsLikelyDragging then
+                return
+            end
+
+            Library:SafeCallback(Func, Table)
+
+            if Changed and Changed.Connected then
+                Changed:Disconnect()
+                Changed = nil
+            end
+        end)
     end)
+
     Library:MakeDraggable(Button, Button, true)
 
     Table.Button = Button
@@ -2496,6 +2570,11 @@ do
             Value = Info.Default, -- Key
             Modifiers = Info.DefaultModifiers, -- Modifiers
             DisplayValue = Info.Default, -- Picker Text
+
+            Blacklisted = Info.Blacklisted,
+            BlacklistedModifiers = Info.BlacklistedModifiers,
+            Whitelisted = Info.Whitelisted,
+            WhitelistedModifiers = Info.WhitelistedModifiers,
 
             Toggled = false,
             Mode = Info.Mode,
@@ -2960,9 +3039,50 @@ do
             local Input
             local ActiveModifiers = {}
 
-            local GetInput = function()
+            local GetInput = nil
+            GetInput = function()
                 Input = UserInputService.InputBegan:Wait()
-                return UserInputService:GetFocusedTextBox() ~= nil
+                if UserInputService:GetFocusedTextBox() ~= nil then
+                    return true
+                end
+
+                if Input.KeyCode == Enum.KeyCode.Escape then
+                    return false
+                end
+
+                local IsMod = IsModifierInput(Input)
+                local KeyName
+                if SpecialKeysInput[Input.UserInputType] ~= nil then
+                    KeyName = SpecialKeysInput[Input.UserInputType]
+                elseif Input.UserInputType == Enum.UserInputType.Keyboard then
+                    if IsMod then
+                        KeyName = ModifiersInput[Input.KeyCode]
+                    else
+                        KeyName = Input.KeyCode.Name
+                    end
+                end
+
+                if KeyName then
+                    if IsMod then
+                        if KeyPicker.WhitelistedModifiers and #KeyPicker.WhitelistedModifiers > 0 and not table.find(KeyPicker.WhitelistedModifiers, KeyName) then
+                            return GetInput()
+                        end
+
+                        if KeyPicker.BlacklistedModifiers and table.find(KeyPicker.BlacklistedModifiers, KeyName) then
+                            return GetInput()
+                        end
+                    else
+                        if KeyPicker.Whitelisted and #KeyPicker.Whitelisted > 0 and not table.find(KeyPicker.Whitelisted, KeyName) then
+                            return GetInput()
+                        end
+
+                        if KeyPicker.Blacklisted and table.find(KeyPicker.Blacklisted, KeyName) then
+                            return GetInput()
+                        end
+                    end
+                end
+
+                return false
             end
 
             repeat
@@ -3031,6 +3151,12 @@ do
 
                 break -- Input found, end loop
             until false
+
+            if Input.KeyCode == Enum.KeyCode.Escape then
+                Picking = false
+                KeyPicker:Update()
+                return
+            end
 
             local Key = "Unknown"
             if SpecialKeysInput[Input.UserInputType] ~= nil then
@@ -4502,6 +4628,10 @@ do
     end
 
     function Funcs:AddInput(Idx, Info)
+        if typeof(Info) == "table" and (typeof(Info.VerifyValue) == "function" and Info.Finished ~= true) then
+            Info.Finished = true
+        end
+
         Info = Library:Validate(Info, Templates.Input)
 
         local Groupbox = self
@@ -4514,6 +4644,7 @@ do
             Finished = Info.Finished,
             Numeric = Info.Numeric,
             ClearTextOnFocus = Info.ClearTextOnFocus,
+            ClearTextOnBlur = Info.ClearTextOnBlur,
             Placeholder = Info.Placeholder,
             AllowEmpty = Info.AllowEmpty,
             EmptyReset = Info.EmptyReset,
@@ -4524,6 +4655,7 @@ do
 
             Callback = Info.Callback,
             Changed = Info.Changed,
+            VerifyValue = Info.VerifyValue,
 
             Disabled = Info.Disabled,
             Visible = Info.Visible,
@@ -4599,6 +4731,10 @@ do
                 end
             end
 
+            if typeof(Input.VerifyValue) == "function" and (Text ~= Input.EmptyReset and Input.VerifyValue(Text) ~= true) then
+                Text = Input.EmptyReset
+            end
+
             Input.Value = Text
             Box.Text = Text
 
@@ -4635,6 +4771,10 @@ do
         if Input.Finished then
             Box.FocusLost:Connect(function(Enter)
                 if not Enter then
+                    if Input.ClearTextOnBlur then
+                        Box.Text = Input.Value
+                    end
+
                     return
                 end
 
@@ -4659,6 +4799,10 @@ do
         table.insert(Groupbox.Elements, Input)
 
         Input.Default = Input.Value
+        if typeof(Input.VerifyValue) == "function" and (Input.Default ~= Input.EmptyReset and Input.VerifyValue(Input.Default) ~= true) then
+            Input:SetValue(Input.EmptyReset)
+            Input.Default = Input.EmptyReset
+        end
         Input.Idx = Idx
 
         Options[Idx] = Input
@@ -5128,7 +5272,8 @@ do
 
             local Count = 0
             for _, Value in Values do
-                if SearchBox and not string.find(tostring(Value):lower(), SearchBox.Text:lower(), 1, true) then
+                local FormattedValue = tostring(Info.FormatListValue and Info.FormatListValue(Value) or Value)
+                if SearchBox and not string.find(FormattedValue:lower(), SearchBox.Text:lower(), 1, true) then
                     continue
                 end
 
@@ -5141,7 +5286,7 @@ do
                     BackgroundTransparency = 1,
                     LayoutOrder = IsDisabled and 1 or 0,
                     Size = UDim2.new(1, 0, 0, 21),
-                    Text = tostring(Value),
+                    Text = FormattedValue,
                     TextSize = 14,
                     TextTransparency = 0.5,
                     TextXAlignment = Enum.TextXAlignment.Left,
@@ -6749,15 +6894,19 @@ end
 function Library:SetNotifySide(Side: string)
     Library.NotifySide = Side
 
-    if Side:lower() == "left" then
+    local Left = Side:lower() == "left"
+    if Left then
         NotificationArea.AnchorPoint = Vector2.new(0, 0)
         NotificationArea.Position = UDim2.fromOffset(6, 6)
-        NotificationList.HorizontalAlignment = Enum.HorizontalAlignment.Left
     else
         NotificationArea.AnchorPoint = Vector2.new(1, 0)
         NotificationArea.Position = UDim2.new(1, -6, 0, 6)
-        NotificationList.HorizontalAlignment = Enum.HorizontalAlignment.Right
     end
+
+    for FakeBg in Library.Notifications do
+        FakeBg.AnchorPoint = Left and Vector2.new(0, 0) or Vector2.new(1, 0)
+    end
+    Library:UpdateNotificationPositions(true)
 end
 
 function Library:Notify(...)
@@ -6766,7 +6915,9 @@ function Library:Notify(...)
 
     if typeof(Info) == "table" then
         Data.Title = tostring(Info.Title)
+        Data.TitleColor = Info.TitleColor
         Data.Description = tostring(Info.Description)
+        Data.DescriptionColor = Info.DescriptionColor
         Data.Time = Info.Time or 5
         Data.SoundId = Info.SoundId
         Data.Steps = Info.Steps
@@ -6793,6 +6944,7 @@ function Library:Notify(...)
     end
 
     local FakeBackground = New("Frame", {
+        AnchorPoint = Library.NotifySide:lower() == "left" and Vector2.new(0, 0) or Vector2.new(1, 0),
         AutomaticSize = Enum.AutomaticSize.Y,
         BackgroundTransparency = 1,
         Size = UDim2.fromScale(1, 0),
@@ -6913,6 +7065,7 @@ function Library:Notify(...)
             Position = UDim2.new(0, (Data.Icon and 21 or 0), 0.5, 0),
             Size = UDim2.fromScale(0, 0),
             Text = Data.Title,
+            TextColor3 = Data.TitleColor or "FontColor",
             TextSize = 15,
             TextXAlignment = Enum.TextXAlignment.Left,
             TextYAlignment = Enum.TextYAlignment.Center,
@@ -6927,6 +7080,7 @@ function Library:Notify(...)
             BackgroundTransparency = 1,
             Size = UDim2.fromScale(0, 0),
             Text = Data.Description,
+            TextColor3 = Data.DescriptionColor or "FontColor",
             TextSize = 14,
             TextXAlignment = Enum.TextXAlignment.Left,
             TextWrapped = true,
@@ -6954,6 +7108,10 @@ function Library:Notify(...)
         end
 
         FakeBackground.Size = UDim2.fromOffset(math.max(TitleX, DescX) + 24 + ExtraWidth, 0)
+
+        if Library.Notifications[FakeBackground] then
+            Library:UpdateNotificationPositions()
+        end
     end
 
     function Data:ChangeTitle(Text)
@@ -6989,6 +7147,14 @@ function Library:Notify(...)
         if DeleteConnection then
             DeleteConnection:Disconnect()
         end
+
+        if FakeBackground then
+            local Idx = table.find(Library.NotifyOrder, FakeBackground)
+            if Idx then
+                table.remove(Library.NotifyOrder, Idx)
+            end
+        end
+        Library:UpdateNotificationPositions()
 
         TweenService
             :Create(Holder, Library.NotifyTweenInfo, {
@@ -7041,7 +7207,12 @@ function Library:Notify(...)
         }):Destroy()
     end
 
+    Data.Holder = Holder
+
     Library.Notifications[FakeBackground] = Data
+
+    table.insert(Library.NotifyOrder, FakeBackground)
+    Library:UpdateNotificationPositions()
 
     FakeBackground.Visible = true
     TweenService:Create(Holder, Library.NotifyTweenInfo, {
@@ -8136,6 +8307,7 @@ function Library:CreateWindow(WindowInfo)
                 InnerTabboxes = {},
 
                 Minimized = false,
+                Visible = true,
             }
 
             function Groupbox:Resize()
@@ -8164,20 +8336,43 @@ function Library:CreateWindow(WindowInfo)
                 end
             end)
 
+            function Groupbox:SetVisible(Visible: boolean)
+                Groupbox.Visible = Visible
+                Groupbox.BoxHolder.Visible = Visible
+
+                Groupbox:Resize()
+
+                if Visible == true and Library.Searching then
+                    Library:UpdateSearch(Library.SearchText)
+                end
+            end
+
+            function Groupbox:Show()
+                Groupbox:SetVisible(true)
+            end
+
+            function Groupbox:Hide()
+                Groupbox:SetVisible(false)
+            end
+
             setmetatable(Groupbox, BaseGroupbox)
 
             Groupbox:Resize()
             Tab.Groupboxes[Info.Name] = Groupbox
 
+            if Info.Visible == false then
+                Groupbox:Hide()
+            end
+
             return Groupbox
         end
 
-        function Tab:AddLeftGroupbox(Name, IconName)
-            return Tab:AddGroupbox({ Side = 1, Name = Name, IconName = IconName })
+        function Tab:AddLeftGroupbox(Name, IconName, Visible)
+            return Tab:AddGroupbox({ Side = 1, Name = Name, IconName = IconName, Visible = Visible })
         end
 
-        function Tab:AddRightGroupbox(Name, IconName)
-            return Tab:AddGroupbox({ Side = 2, Name = Name, IconName = IconName })
+        function Tab:AddRightGroupbox(Name, IconName, Visible)
+            return Tab:AddGroupbox({ Side = 2, Name = Name, IconName = IconName, Visible = Visible })
         end
 
         function Tab:AddTabbox(Info)
@@ -8497,6 +8692,14 @@ function Library:CreateWindow(WindowInfo)
             Library.ActiveTab = nil
         end
 
+        function Tab:SetVisible(Visible: boolean)
+            TabButton.Visible = Visible
+
+            if not Visible and Library.ActiveTab == Tab then
+                Tab:Hide()
+            end
+        end
+
         --// Execution \\--
         if not Library.ActiveTab then
             Tab:Show()
@@ -8734,6 +8937,14 @@ function Library:CreateWindow(WindowInfo)
             Window:HideTabInfo()
 
             Library.ActiveTab = nil
+        end
+
+        function Tab:SetVisible(Visible: boolean)
+            TabButton.Visible = Visible
+
+            if not Visible and Library.ActiveTab == Tab then
+                Tab:Hide()
+            end
         end
 
         --// Execution \\--
@@ -9418,9 +9629,9 @@ function Library:CreateWindow(WindowInfo)
         if Library.Toggled and not Library.IsMobile then
             local OldMouseIconEnabled = UserInputService.MouseIconEnabled
             pcall(function()
-                RunService:UnbindFromRenderStep("ShowCursor")
+                RunService:UnbindFromRenderStep(Library.ShowCursorBinding)
             end)
-            RunService:BindToRenderStep("ShowCursor", Enum.RenderPriority.Last.Value, function()
+            RunService:BindToRenderStep(Library.ShowCursorBinding, Enum.RenderPriority.Last.Value, function()
                 UserInputService.MouseIconEnabled = not Library.ShowCustomCursor
 
                 Cursor.Position = UDim2.fromOffset(Mouse.X, Mouse.Y)
@@ -9429,7 +9640,7 @@ function Library:CreateWindow(WindowInfo)
                 if not (Library.Toggled and ScreenGui and ScreenGui.Parent) then
                     UserInputService.MouseIconEnabled = OldMouseIconEnabled
                     Cursor.Visible = false
-                    RunService:UnbindFromRenderStep("ShowCursor")
+                    RunService:UnbindFromRenderStep(Library.ShowCursorBinding)
                 end
             end)
         elseif not Library.Toggled then
@@ -9611,8 +9822,28 @@ do
             end
         end
 
-        ToggleBtnFrame.MouseButton1Click:Connect(function()
-            Library:Toggle()
+        ToggleBtnFrame.InputBegan:Connect(function(Input: InputObject)
+            if not IsClickInput(Input) then
+                return
+            end
+
+            local Start = os.clock()
+
+            local Changed
+            Changed = Input.Changed:Connect(function()
+                if Input.UserInputState ~= Enum.UserInputState.End then
+                    return
+                end
+
+                if os.clock() - Start < 0.25 then
+                    Library:Toggle()
+                end
+
+                if Changed and Changed.Connected then
+                    Changed:Disconnect()
+                    Changed = nil
+                end
+            end)
         end)
         Library:MakeDraggable(ToggleBtnFrame, ToggleBtnFrame, true)
 
@@ -9629,7 +9860,7 @@ do
         local LockButton = Library:AddDraggableButton("Lock", function(self)
             Library.CantDragForced = not Library.CantDragForced
             self:SetText(Library.CantDragForced and "Unlock" or "Lock")
-        end, true)
+        end, true, true)
 
         if WindowInfo.MobileButtonsSide == "Right" then
             LockButton.Button.Position = UDim2.new(1, -6, 0, 46)
