@@ -91,15 +91,6 @@ local LINK = "https://chiyo.dev/getkey"
 local ROOT = "Chiyo/Keys"
 local FILE = ROOT .. "/" .. (id or "default") .. ".txt"
 
-local api = loadstring(game:HttpGet("https://sdkapi-public.luarmor.net/library.lua"))()
-api.script_id = id or ""
-
-local function notify(m)
-	pcall(function()
-		game:GetService("StarterGui"):SetCore("SendNotification", { Title = "Chiyo", Text = tostring(m), Duration = 4 })
-	end)
-end
-
 local function trim(v)
 	return tostring(v or ""):match("^%s*(.-)%s*$")
 end
@@ -128,11 +119,6 @@ local function set(k)
 	end
 end
 
-local function check(k)
-	local ok, s = pcall(api.check_key, k)
-	return (ok and s and s.code) or nil, ok and s or nil
-end
-
 local function go(k)
 	set(k)
 	getgenv().__chiyo_loader_url = url
@@ -140,25 +126,16 @@ local function go(k)
 	loadstring(game:HttpGet(url))()
 end
 
-local NOTIFY_ERR = {
-	KEY_EXPIRED = "Key expired. Get a new key.",
-	KEY_BANNED = "Key is blacklisted.",
-}
-
 if url and id then
-	local keys = {}
-	local g = getgenv and getgenv().script_key
-	if type(g) == "string" and g ~= "" then keys[#keys + 1] = g end
+	local k = getgenv and getgenv().script_key
+	if type(k) == "string" and trim(k) ~= "" then
+		save(k)
+		return go(k)
+	end
 	local s = read()
-	if s and s ~= g then keys[#keys + 1] = s end
-	for _, k in keys do
-		local code = check(k)
-		if code == "KEY_VALID" then
-			save(k)
-			return go(k)
-		end
-		local m = NOTIFY_ERR[code]
-		if m then notify("Chiyo: " .. m) break end
+	if s and trim(s) ~= "" then
+		save(s)
+		return go(s)
 	end
 end
 
@@ -171,13 +148,6 @@ Library.Scheme.BackgroundColor = Color3.fromHex("1c1c1c")
 Library.Scheme.OutlineColor    = Color3.fromHex("373737")
 Library:SetFont(Enum.Font.Gotham)
 
-local ERR = {
-	KEY_EXPIRED   = { Title = "Key Expired",  Description = "Your key has expired. Get a new one from the key link.", Time = 7 },
-	KEY_BANNED    = { Title = "Key Banned",   Description = "This key has been blacklisted.", Time = 7 },
-	KEY_INCORRECT = { Title = "Invalid Key",  Description = "Key does not exist or has been deleted.", Time = 6 },
-	KEY_INVALID   = { Title = "Invalid Key",  Description = "Key format is invalid, check for extra spaces or missing characters.", Time = 6 },
-}
-
 local function verify(key)
 	if not url or not id then
 		Library:Notify({ Title = "Unsupported", Description = "This game is not supported.", Time = 5 })
@@ -188,22 +158,9 @@ local function verify(key)
 		Library:Notify({ Title = "Key Required", Description = "Please enter a valid key.", Time = 4 })
 		return
 	end
-	local code, s = check(k)
-	if code == "KEY_VALID" then
-		local d = "Key accepted. Loading script..."
-		if s.data and s.data.auth_expire and s.data.auth_expire > 0 then
-			local secs = math.max(0, s.data.auth_expire - os.time())
-			d = string.format("Key accepted. Expires in %dh %dm. Loading...", math.floor(secs / 3600), math.floor((secs % 3600) / 60))
-		end
-		Library:Notify({ Title = "Success", Description = d, Time = 4 })
-		save(k)
-		task.defer(function() Library:Unload() go(k) end)
-	elseif ERR[code] then
-		Library:Notify(ERR[code])
-	else
-		local m = (s and s.message) or "An unknown error occurred."
-		Library:Notify({ Title = "Error", Description = m .. (code and (" (" .. code .. ")") or ""), Time = 6 })
-	end
+	save(k)
+	Library:Notify({ Title = "Loading", Description = "Loading script...", Time = 3 })
+	task.defer(function() Library:Unload() go(k) end)
 end
 
 local Window = Library:CreateWindow({
