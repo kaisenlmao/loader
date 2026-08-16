@@ -143,7 +143,6 @@ end
 local NOTIFY_ERR = {
 	KEY_EXPIRED = "Key expired. Get a new key.",
 	KEY_BANNED = "Key is blacklisted.",
-	KEY_HWID_LOCKED = "Key locked to a different HWID. Reset it by renewing the key.",
 }
 
 if url and id then
@@ -173,11 +172,10 @@ Library.Scheme.OutlineColor    = Color3.fromHex("373737")
 Library:SetFont(Enum.Font.Gotham)
 
 local ERR = {
-	KEY_EXPIRED     = { Title = "Key Expired",  Description = "Your key has expired. Get a new one from the key link.", Time = 7 },
-	KEY_BANNED      = { Title = "Key Banned",   Description = "This key has been blacklisted.", Time = 7 },
-	KEY_HWID_LOCKED = { Title = "HWID Locked",  Description = "Key is linked to a different HWID. Reset it by renewing the Key.", Time = 8 },
-	KEY_INCORRECT   = { Title = "Invalid Key",  Description = "Key does not exist or has been deleted.", Time = 6 },
-	KEY_INVALID     = { Title = "Invalid Key",  Description = "Key format is invalid, check for extra spaces or missing characters.", Time = 6 },
+	KEY_EXPIRED   = { Title = "Key Expired",  Description = "Your key has expired. Get a new one from the key link.", Time = 7 },
+	KEY_BANNED    = { Title = "Key Banned",   Description = "This key has been blacklisted.", Time = 7 },
+	KEY_INCORRECT = { Title = "Invalid Key",  Description = "Key does not exist or has been deleted.", Time = 6 },
+	KEY_INVALID   = { Title = "Invalid Key",  Description = "Key format is invalid, check for extra spaces or missing characters.", Time = 6 },
 }
 
 local function verify(key)
@@ -221,7 +219,6 @@ local Window = Library:CreateWindow({
 
 local Tab = Window:AddTab({ Name = "Key System", Icon = "key" })
 local L  = Tab:AddLeftGroupbox("Key")
-local R  = Tab:AddRightGroupbox("Information")
 
 local input = L:AddInput("main_key_input", { Placeholder = "Enter your key here...", Finished = false })
 
