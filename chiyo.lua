@@ -1,3 +1,19 @@
+local hub_env = type(getgenv) == "function" and getgenv() or nil
+local sessions = nil
+if hub_env then
+	sessions = hub_env.__chiyo_sessions
+	if type(sessions) ~= "table" then
+		sessions = {}
+		hub_env.__chiyo_sessions = sessions
+	end
+	if sessions[game.PlaceId] == game.JobId then
+		pcall(function()
+			game:GetService("StarterGui"):SetCore("SendNotification", { Title = "Chiyo", Text = "Already running in this server.", Duration = 4 })
+		end)
+		return
+	end
+end
+
 if not game:IsLoaded() then game.Loaded:Wait() end
 
 local GAMES = {
@@ -76,16 +92,46 @@ local GAMES = {
 	[94640181989498]  = { "grow a chicken fighter", "https://api.luarmor.net/files/v3/loaders/f92614f2d2925e409cdd22a232577ff0.lua" },
 }
 
-local route = GAMES[game.PlaceId]
-local url = route and route[2]
-local id = type(url) == "string" and url:match("/loaders/([%w]+)%.lua$") or nil
+local GAMES_BY_UNIVERSE = {
+	[7750955984]  = { "hunty zomby", "https://api.luarmor.net/files/v3/loaders/c9509845ca1f419a44ed41cdb5721b56.lua" },
+	[7094518649]  = { "restaurant tycoon 3", "https://api.luarmor.net/files/v3/loaders/013565ad436685d1a3af70a26b4ee637.lua" },
+	[7671049560]  = { "the forge", "https://api.luarmor.net/files/v3/loaders/bbf04acd7199b29f9f9544d56687b74b.lua" },
+	[9186719164]  = { "sailor piece", "https://api.luarmor.net/files/v3/loaders/18226fe17f5e6ce6ab3111ccb7994daf.lua" },
+	[8202280624]  = { "bite by night", "https://api.luarmor.net/files/v3/loaders/296f665b08928bd4d810161801b37acf.lua" },
+	[7785400752]  = { "zoo or oof", "https://api.luarmor.net/files/v3/loaders/8a4cccba7a84d889c5426e9484ca6587.lua" },
+	[9802644580]  = { "summon heroes", "https://api.luarmor.net/files/v4/loaders/0aa7263af1401f475f2b2d28945c0f8b.lua" },
+	[10004244222] = { "kick a lucky block", "https://api.luarmor.net/files/v3/loaders/648494a8772b0379925af5c935c8114e.lua" },
+	[9792947201]  = { "slime rng", "https://api.luarmor.net/files/v3/loaders/d84e9eb1484f86a55e8bf8ad8dbe0d77.lua" },
+	[9348272796]  = { "survive zombie arena", "https://api.luarmor.net/files/v3/loaders/e4a17c871207eeecd4f58fae79d9d474.lua" },
+	[9073513091]  = { "anime apocalypse", "https://api.luarmor.net/files/v3/loaders/0565e406ef13358f65bff247fabd5c65.lua" },
+	[10200395747] = { "grow a garden 2", "https://api.luarmor.net/files/v3/loaders/6db88a06aec7282a5ab455917a42bfbe.lua" },
+	[10148749921] = { "animal hospital", "https://api.luarmor.net/files/v3/loaders/fc76ccc5977af60a03c1b318a3a0bced.lua" },
+	[9826885587]  = { "evomon", "https://api.luarmor.net/files/v3/loaders/56cb199794326e78d8c01c4164866c5e.lua" },
+	[10261267004] = { "storage hunters", "https://api.luarmor.net/files/v3/loaders/a7196291de7069f910f5b26ea3ad1aaf.lua" },
+	[10204207151] = { "catch a brainrot", "https://api.luarmor.net/files/v3/loaders/e68f71ea4150cef34b20e188c70f2e0f.lua" },
+	[10267363348] = { "drain the lake", "https://api.luarmor.net/files/v3/loaders/774e7e358882d9c55b4649af0f0a22fc.lua" },
+	[7613921865]  = { "anime expeditions", "https://api.luarmor.net/files/v3/loaders/63b1f8053d24c544db6faacf6977e6cc.lua" },
+	[10187294555] = { "mine a mountain", "https://api.luarmor.net/files/v3/loaders/296f665b08928bd4d810161801b37acf.lua" },
+	[10253235584] = { "build a base rng", "https://api.luarmor.net/files/v3/loaders/d5247fade99791a0e90e3275348b00bf.lua" },
+	[8841437826]  = { "capybaras vs plants", "https://api.luarmor.net/files/v3/loaders/5908510f57805eb2c203441f1cb30712.lua" },
+	[10506207587] = { "magic loot", "https://api.luarmor.net/files/v3/loaders/9e831929e8a54c724cb7ae06675bae3d.lua" },
+	[10153098880] = { "heroes rng", "https://api.luarmor.net/files/v3/loaders/c15214847b4bf55c68507a56ebc4646b.lua" },
+	[8959257868]  = { "unscathed", "https://api.luarmor.net/files/v3/loaders/2fa08ba495148db9cbb27b52b5122b38.lua" },
+	[10563114921] = { "steal an egg", "https://api.luarmor.net/files/v3/loaders/836310b94f7128e39a94067b647c9618.lua" },
+	[10144587520] = { "anime card farm", "https://api.luarmor.net/files/v3/loaders/5e898dc5541aa4fd0dc154210d221c16.lua" },
+	[10338952197] = { "grow a chicken fighter", "https://api.luarmor.net/files/v3/loaders/f92614f2d2925e409cdd22a232577ff0.lua" },
+}
+
+local entry = GAMES[game.PlaceId] or GAMES_BY_UNIVERSE[game.GameId]
+local loader_url = entry and entry[2]
+local script_id = type(loader_url) == "string" and loader_url:match("/loaders/([%w]+)%.lua$") or nil
 
 local LINK = "https://chiyo.dev/getkey"
 local ROOT = "Chiyo/Keys"
-local FILE = ROOT .. "/" .. (id or "default") .. ".txt"
+local FILE = ROOT .. "/" .. (script_id or "default") .. ".txt"
 
 local api = loadstring(game:HttpGet("https://sdkapi-public.luarmor.net/library.lua"))()
-api.script_id = id or ""
+api.script_id = script_id or ""
 
 local function notify(m)
 	pcall(function()
@@ -93,8 +139,9 @@ local function notify(m)
 	end)
 end
 
-local function trim(v)
-	return tostring(v or ""):match("^%s*(.-)%s*$")
+local function strip(v)
+	local s = tostring(v or ""):gsub("^%s+", "")
+	return (s:gsub("%s+$", ""))
 end
 
 local function save(k)
@@ -110,14 +157,31 @@ local function read()
 	return (ok and v and v ~= "") and v or nil
 end
 
+local function as_key(v)
+	if type(v) ~= "string" then return nil end
+	v = strip(v)
+	local quoted = v:match('^"(.*)"$') or v:match("^'(.*)'$")
+	if quoted then v = strip(quoted) end
+	if v ~= "" then return v end
+	return nil
+end
+
+local function inline_key()
+	local roblox_env = type(getrenv) == "function" and getrenv() or nil
+	return as_key(script_key)
+		or as_key(SCRIPT_KEY)
+		or as_key(type(_G) == "table" and (_G.script_key or _G.SCRIPT_KEY))
+		or as_key(hub_env and (hub_env.script_key or hub_env.SCRIPT_KEY))
+		or as_key(roblox_env and (roblox_env.script_key or roblox_env.SCRIPT_KEY))
+end
+
 local function set(k)
-	k = trim(k)
+	k = strip(k)
 	if k == "" then return end
 	script_key, SCRIPT_KEY = k, k
 	_G.script_key, _G.SCRIPT_KEY = k, k
-	if type(getgenv) == "function" then
-		local g = getgenv()
-		g.script_key, g.SCRIPT_KEY = k, k
+	if hub_env then
+		hub_env.script_key, hub_env.SCRIPT_KEY = k, k
 	end
 end
 
@@ -128,7 +192,13 @@ end
 
 local function go(k)
 	set(k)
-	loadstring(game:HttpGet(url))()
+	local ok = pcall(function()
+		loadstring(game:HttpGet(loader_url))()
+	end)
+	if ok and sessions then
+		sessions[game.PlaceId] = game.JobId
+	end
+	return ok
 end
 
 local NOTIFY_ERR = {
@@ -137,20 +207,26 @@ local NOTIFY_ERR = {
 	KEY_HWID_LOCKED = "Key locked to a different HWID. Reset it by renewing the key.",
 }
 
-if url and id then
-	local keys = {}
-	local g = getgenv and getgenv().script_key
-	if type(g) == "string" and g ~= "" then keys[#keys + 1] = g end
-	local s = read()
-	if s and s ~= g then keys[#keys + 1] = s end
+if loader_url and script_id then
+	local seen, keys = {}, {}
+	local function consider(v)
+		v = as_key(v)
+		if v and not seen[v] then
+			seen[v] = true
+			keys[#keys + 1] = v
+		end
+	end
+	consider(inline_key())
+	consider(read())
 	for _, k in keys do
 		local code = check(k)
 		if code == "KEY_VALID" then
 			save(k)
-			return go(k)
+			if go(k) then return end
+			break
 		end
 		local m = NOTIFY_ERR[code]
-		if m then notify("Chiyo: " .. m) break end
+		if m then notify(m) break end
 	end
 end
 
@@ -172,11 +248,11 @@ local ERR = {
 }
 
 local function verify(key)
-	if not url or not id then
+	if not loader_url or not script_id then
 		Library:Notify({ Title = "Unsupported", Description = "This game is not supported.", Time = 5 })
 		return
 	end
-	local k = trim(key)
+	local k = strip(key)
 	if k == "" then
 		Library:Notify({ Title = "Key Required", Description = "Please enter a valid key.", Time = 4 })
 		return
@@ -219,11 +295,11 @@ local input = L:AddInput("main_key_input", { Placeholder = "Enter your key here.
 do
 	local last, pending = "", nil
 	input:OnChanged(function()
-		local cur = trim(input.Value)
+		local cur = strip(input.Value)
 		if cur == "" or cur == last then return end
 		if pending then task.cancel(pending) end
 		pending = task.delay(0.35, function()
-			local stable = trim(input.Value)
+			local stable = strip(input.Value)
 			if stable == cur then last, pending = stable, nil verify(stable) end
 		end)
 	end)
