@@ -71,7 +71,12 @@ local GAMES = {
 	[138381251771774] = { "drain the lake", "https://api.luarmor.net/files/v3/loaders/774e7e358882d9c55b4649af0f0a22fc.lua" },
 	[124786371598438] = { "drain the lake", "https://api.luarmor.net/files/v3/loaders/774e7e358882d9c55b4649af0f0a22fc.lua" },
 
-	[84515722934860]  = { "anime expeditions", "https://api.luarmor.net/files/v3/loaders/63b1f8053d24c544db6faacf6977e6cc.lua" },
+	[84515722934860]  = { "runaways", "https://api.luarmor.net/files/v3/loaders/63b1f8053d24c544db6faacf6977e6cc.lua" },
+
+	[117311404196294] = { "runaways", "https://api.luarmor.net/files/v3/loaders/63b1f8053d24c544db6faacf6977e6cc.lua" },
+	[118418618261207] = { "runaways", "https://api.luarmor.net/files/v3/loaders/63b1f8053d24c544db6faacf6977e6cc.lua" },
+
+	[74102906764176]  = { "greedy growers", "https://api.luarmor.net/files/v3/loaders/c15214847b4bf55c68507a56ebc4646b.lua" },
 
 	[125927821145949] = { "mine a mountain", "https://api.luarmor.net/files/v3/loaders/296f665b08928bd4d810161801b37acf.lua" },
 
@@ -81,7 +86,7 @@ local GAMES = {
 
 	[133188236593503] = { "magic loot", "https://api.luarmor.net/files/v3/loaders/9e831929e8a54c724cb7ae06675bae3d.lua" },
 
-	[108307565942574] = { "heroes rng", "https://api.luarmor.net/files/v3/loaders/c15214847b4bf55c68507a56ebc4646b.lua" },
+	[108307565942574] = { "greedy growers", "https://api.luarmor.net/files/v3/loaders/c15214847b4bf55c68507a56ebc4646b.lua" },
 
 	[122951224417794] = { "unscathed", "https://api.luarmor.net/files/v3/loaders/2fa08ba495148db9cbb27b52b5122b38.lua" },
 
@@ -110,12 +115,14 @@ local GAMES_BY_UNIVERSE = {
 	[10261267004] = { "storage hunters", "https://api.luarmor.net/files/v3/loaders/a7196291de7069f910f5b26ea3ad1aaf.lua" },
 	[10204207151] = { "catch a brainrot", "https://api.luarmor.net/files/v3/loaders/e68f71ea4150cef34b20e188c70f2e0f.lua" },
 	[10267363348] = { "drain the lake", "https://api.luarmor.net/files/v3/loaders/774e7e358882d9c55b4649af0f0a22fc.lua" },
-	[7613921865]  = { "anime expeditions", "https://api.luarmor.net/files/v3/loaders/63b1f8053d24c544db6faacf6977e6cc.lua" },
+	[7613921865]  = { "runaways", "https://api.luarmor.net/files/v3/loaders/63b1f8053d24c544db6faacf6977e6cc.lua" },
+	[7585140258]  = { "runaways", "https://api.luarmor.net/files/v3/loaders/63b1f8053d24c544db6faacf6977e6cc.lua" },
 	[10187294555] = { "mine a mountain", "https://api.luarmor.net/files/v3/loaders/296f665b08928bd4d810161801b37acf.lua" },
 	[10253235584] = { "build a base rng", "https://api.luarmor.net/files/v3/loaders/d5247fade99791a0e90e3275348b00bf.lua" },
 	[8841437826]  = { "capybaras vs plants", "https://api.luarmor.net/files/v3/loaders/5908510f57805eb2c203441f1cb30712.lua" },
 	[10506207587] = { "magic loot", "https://api.luarmor.net/files/v3/loaders/9e831929e8a54c724cb7ae06675bae3d.lua" },
-	[10153098880] = { "heroes rng", "https://api.luarmor.net/files/v3/loaders/c15214847b4bf55c68507a56ebc4646b.lua" },
+	[10153098880] = { "greedy growers", "https://api.luarmor.net/files/v3/loaders/c15214847b4bf55c68507a56ebc4646b.lua" },
+	[10440833423] = { "greedy growers", "https://api.luarmor.net/files/v3/loaders/c15214847b4bf55c68507a56ebc4646b.lua" },
 	[8959257868]  = { "unscathed", "https://api.luarmor.net/files/v3/loaders/2fa08ba495148db9cbb27b52b5122b38.lua" },
 	[10563114921] = { "steal an egg", "https://api.luarmor.net/files/v3/loaders/836310b94f7128e39a94067b647c9618.lua" },
 	[10144587520] = { "anime card farm", "https://api.luarmor.net/files/v3/loaders/5e898dc5541aa4fd0dc154210d221c16.lua" },
