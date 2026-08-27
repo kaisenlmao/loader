@@ -43,8 +43,9 @@ local GAMES = {
 
 	[92416421522960]  = { "slime rng", "https://api.luarmor.net/files/v3/loaders/d84e9eb1484f86a55e8bf8ad8dbe0d77.lua" },
 
-	[114204398207377] = { "survive zombie arena", "https://api.luarmor.net/files/v3/loaders/e4a17c871207eeecd4f58fae79d9d474.lua" },
-	[98927955463992]  = { "survive zombie arena", "https://api.luarmor.net/files/v3/loaders/e4a17c871207eeecd4f58fae79d9d474.lua" },
+	[77649408247578]  = { "dungeon quest reborn", "https://api.luarmor.net/files/v3/loaders/e4a17c871207eeecd4f58fae79d9d474.lua" },
+	[85776757589518]  = { "dungeon quest reborn", "https://api.luarmor.net/files/v3/loaders/e4a17c871207eeecd4f58fae79d9d474.lua" },
+	[115445507767090] = { "dungeon quest reborn", "https://api.luarmor.net/files/v3/loaders/e4a17c871207eeecd4f58fae79d9d474.lua" },
 
 	[119114794144012] = { "anime apocalypse", "https://api.luarmor.net/files/v3/loaders/0565e406ef13358f65bff247fabd5c65.lua" },
 	[140409475718339] = { "anime apocalypse", "https://api.luarmor.net/files/v3/loaders/0565e406ef13358f65bff247fabd5c65.lua" },
@@ -107,7 +108,7 @@ local GAMES_BY_UNIVERSE = {
 	[9802644580]  = { "summon heroes", "https://api.luarmor.net/files/v4/loaders/0aa7263af1401f475f2b2d28945c0f8b.lua" },
 	[10004244222] = { "kick a lucky block", "https://api.luarmor.net/files/v3/loaders/648494a8772b0379925af5c935c8114e.lua" },
 	[9792947201]  = { "slime rng", "https://api.luarmor.net/files/v3/loaders/d84e9eb1484f86a55e8bf8ad8dbe0d77.lua" },
-	[9348272796]  = { "survive zombie arena", "https://api.luarmor.net/files/v3/loaders/e4a17c871207eeecd4f58fae79d9d474.lua" },
+	[9931749389]  = { "dungeon quest reborn", "https://api.luarmor.net/files/v3/loaders/e4a17c871207eeecd4f58fae79d9d474.lua" },
 	[9073513091]  = { "anime apocalypse", "https://api.luarmor.net/files/v3/loaders/0565e406ef13358f65bff247fabd5c65.lua" },
 	[10200395747] = { "grow a garden 2", "https://api.luarmor.net/files/v3/loaders/6db88a06aec7282a5ab455917a42bfbe.lua" },
 	[10148749921] = { "animal hospital", "https://api.luarmor.net/files/v3/loaders/fc76ccc5977af60a03c1b318a3a0bced.lua" },
