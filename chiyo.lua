@@ -19,6 +19,9 @@ if not game:IsLoaded() then game.Loaded:Wait() end
 local GAMES = {
 	[103754275310547] = { "hunty zomby", "https://api.luarmor.net/files/v3/loaders/c9509845ca1f419a44ed41cdb5721b56.lua" },
 	[86076978383613]  = { "hunty zomby", "https://api.luarmor.net/files/v3/loaders/c9509845ca1f419a44ed41cdb5721b56.lua" },
+	[93825215891304]  = { "hunty zomby", "https://api.luarmor.net/files/v3/loaders/c9509845ca1f419a44ed41cdb5721b56.lua" },
+	[95512431395349]  = { "hunty zomby", "https://api.luarmor.net/files/v3/loaders/c9509845ca1f419a44ed41cdb5721b56.lua" },
+	[139842844647383] = { "hunty zomby", "https://api.luarmor.net/files/v3/loaders/c9509845ca1f419a44ed41cdb5721b56.lua" },
 	[119048529960596] = { "restaurant tycoon 3", "https://api.luarmor.net/files/v3/loaders/013565ad436685d1a3af70a26b4ee637.lua" },
 	[129009554587176] = { "the forge", "https://api.luarmor.net/files/v3/loaders/bbf04acd7199b29f9f9544d56687b74b.lua" },
 	[76558904092080]  = { "the forge", "https://api.luarmor.net/files/v3/loaders/bbf04acd7199b29f9f9544d56687b74b.lua" },
