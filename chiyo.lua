@@ -44,7 +44,7 @@ local GAMES = {
 
 	[89469502395769]  = { "kick a lucky block", "https://api.luarmor.net/files/v3/loaders/648494a8772b0379925af5c935c8114e.lua" },
 
-	[92416421522960]  = { "slime rng", "https://api.luarmor.net/files/v3/loaders/d84e9eb1484f86a55e8bf8ad8dbe0d77.lua" },
+	[116497287371701] = { "karinderya", "https://api.luarmor.net/files/v3/loaders/d84e9eb1484f86a55e8bf8ad8dbe0d77.lua" },
 
 	[77649408247578]  = { "dungeon quest reborn", "https://api.luarmor.net/files/v3/loaders/e4a17c871207eeecd4f58fae79d9d474.lua" },
 	[85776757589518]  = { "dungeon quest reborn", "https://api.luarmor.net/files/v3/loaders/e4a17c871207eeecd4f58fae79d9d474.lua" },
@@ -53,9 +53,8 @@ local GAMES = {
 	[119114794144012] = { "anime apocalypse", "https://api.luarmor.net/files/v3/loaders/0565e406ef13358f65bff247fabd5c65.lua" },
 	[140409475718339] = { "anime apocalypse", "https://api.luarmor.net/files/v3/loaders/0565e406ef13358f65bff247fabd5c65.lua" },
 
-	[97598239454123]  = { "grow a garden 2", "https://api.luarmor.net/files/v3/loaders/6db88a06aec7282a5ab455917a42bfbe.lua" },
-	[77085202503540]  = { "grow a garden 2", "https://api.luarmor.net/files/v3/loaders/6db88a06aec7282a5ab455917a42bfbe.lua" },
-	[133438856880402] = { "grow a garden 2", "https://api.luarmor.net/files/v3/loaders/6db88a06aec7282a5ab455917a42bfbe.lua" },
+	[85967844112283]  = { "last stop", "https://api.luarmor.net/files/v3/loaders/6db88a06aec7282a5ab455917a42bfbe.lua" },
+	[122776220269735] = { "last stop", "https://api.luarmor.net/files/v3/loaders/6db88a06aec7282a5ab455917a42bfbe.lua" },
 
 	[78515283254292]  = { "animal hospital", "https://api.luarmor.net/files/v3/loaders/fc76ccc5977af60a03c1b318a3a0bced.lua" },
 	[104522435597696] = { "animal hospital", "https://api.luarmor.net/files/v3/loaders/fc76ccc5977af60a03c1b318a3a0bced.lua" },
@@ -110,10 +109,10 @@ local GAMES_BY_UNIVERSE = {
 	[7785400752]  = { "zoo or oof", "https://api.luarmor.net/files/v3/loaders/8a4cccba7a84d889c5426e9484ca6587.lua" },
 	[9802644580]  = { "summon heroes", "https://api.luarmor.net/files/v4/loaders/0aa7263af1401f475f2b2d28945c0f8b.lua" },
 	[10004244222] = { "kick a lucky block", "https://api.luarmor.net/files/v3/loaders/648494a8772b0379925af5c935c8114e.lua" },
-	[9792947201]  = { "slime rng", "https://api.luarmor.net/files/v3/loaders/d84e9eb1484f86a55e8bf8ad8dbe0d77.lua" },
+	[10648820673] = { "karinderya", "https://api.luarmor.net/files/v3/loaders/d84e9eb1484f86a55e8bf8ad8dbe0d77.lua" },
 	[9931749389]  = { "dungeon quest reborn", "https://api.luarmor.net/files/v3/loaders/e4a17c871207eeecd4f58fae79d9d474.lua" },
 	[9073513091]  = { "anime apocalypse", "https://api.luarmor.net/files/v3/loaders/0565e406ef13358f65bff247fabd5c65.lua" },
-	[10200395747] = { "grow a garden 2", "https://api.luarmor.net/files/v3/loaders/6db88a06aec7282a5ab455917a42bfbe.lua" },
+	[10759337137] = { "last stop", "https://api.luarmor.net/files/v3/loaders/6db88a06aec7282a5ab455917a42bfbe.lua" },
 	[10148749921] = { "animal hospital", "https://api.luarmor.net/files/v3/loaders/fc76ccc5977af60a03c1b318a3a0bced.lua" },
 	[9826885587]  = { "evomon", "https://api.luarmor.net/files/v3/loaders/56cb199794326e78d8c01c4164866c5e.lua" },
 	[10261267004] = { "storage hunters", "https://api.luarmor.net/files/v3/loaders/a7196291de7069f910f5b26ea3ad1aaf.lua" },
