@@ -37,7 +37,7 @@ local GAMES = {
 	[130167267952199] = { "sailor piece sea 2", "https://api.luarmor.net/files/v3/loaders/9979d5649836f6b746df57a667c6daa9.lua" },
 	[98826438856089]  = { "sailor piece", "https://api.luarmor.net/files/v3/loaders/9979d5649836f6b746df57a667c6daa9.lua" },
 
-	[70845479499574]  = { "bite by night", "https://api.luarmor.net/files/v3/loaders/1fb2da056ac8c871119d0bd58500629b.lua" },
+	[18335956021]  = { "grand blue", "https://api.luarmor.net/files/v3/loaders/1fb2da056ac8c871119d0bd58500629b.lua" },
 
 	[80877167393789]  = { "summon heroes", "https://api.luarmor.net/files/v4/loaders/80bcf4351bd4b2a776dc71b8502d3a1e.lua" },
 	[128314954869462] = { "summon heroes", "https://api.luarmor.net/files/v4/loaders/80bcf4351bd4b2a776dc71b8502d3a1e.lua" },
@@ -83,11 +83,11 @@ local GAMES = {
 
 	[74102906764176]  = { "greedy growers", "https://api.luarmor.net/files/v3/loaders/df230805784849c4ee2dd9790ce3bf0f.lua" },
 
-	[125927821145949] = { "mine a mountain", "https://api.luarmor.net/files/v3/loaders/1fb2da056ac8c871119d0bd58500629b.lua" },
+	[118635363908336] = { "grand blue", "https://api.luarmor.net/files/v3/loaders/1fb2da056ac8c871119d0bd58500629b.lua" },
 
 	[99108783264633]  = { "build a base rng", "https://api.luarmor.net/files/v3/loaders/8a79f287291004efa1558612b10a7387.lua" },
 
-	[104973076655377] = { "capybaras vs plants", "https://api.luarmor.net/files/v3/loaders/3be50428e6ad8a1f7be774c8704966cc.lua" },
+	[126870639873289] = { "jump for animals", "https://api.luarmor.net/files/v3/loaders/3be50428e6ad8a1f7be774c8704966cc.lua" },
 
 	[133188236593503] = { "magic loot", "https://api.luarmor.net/files/v3/loaders/7f3dc0d8adb6c6283364da22589103e5.lua" },
 
@@ -107,7 +107,7 @@ local GAMES_BY_UNIVERSE = {
 	[7094518649]  = { "restaurant tycoon 3", "https://api.luarmor.net/files/v3/loaders/4c6ca668ef4a698341d0529c8b296cd1.lua" },
 	[7671049560]  = { "the forge", "https://api.luarmor.net/files/v3/loaders/313f260d39974a175f95398f3fa5bd27.lua" },
 	[9186719164]  = { "sailor piece", "https://api.luarmor.net/files/v3/loaders/9979d5649836f6b746df57a667c6daa9.lua" },
-	[8202280624]  = { "bite by night", "https://api.luarmor.net/files/v3/loaders/1fb2da056ac8c871119d0bd58500629b.lua" },
+	[6215986499]  = { "grand blue", "https://api.luarmor.net/files/v3/loaders/1fb2da056ac8c871119d0bd58500629b.lua" },
 	[9802644580]  = { "summon heroes", "https://api.luarmor.net/files/v4/loaders/80bcf4351bd4b2a776dc71b8502d3a1e.lua" },
 	[10004244222] = { "kick a lucky block", "https://api.luarmor.net/files/v3/loaders/137b76b52f8f3234db2bda640e3011a8.lua" },
 	[9792947201]  = { "slime rng", "https://api.luarmor.net/files/v3/loaders/8390ffc46357d1321c3122ed2cd9ad69.lua" },
@@ -121,9 +121,8 @@ local GAMES_BY_UNIVERSE = {
 	[10267363348] = { "drain the lake", "https://api.luarmor.net/files/v3/loaders/3509d38120b35f627d9e9ed1f3c88844.lua" },
 	[7613921865]  = { "runaways", "https://api.luarmor.net/files/v3/loaders/dfd564eb12bcbb43fec48e24395986d9.lua" },
 	[7585140258]  = { "runaways", "https://api.luarmor.net/files/v3/loaders/dfd564eb12bcbb43fec48e24395986d9.lua" },
-	[10187294555] = { "mine a mountain", "https://api.luarmor.net/files/v3/loaders/1fb2da056ac8c871119d0bd58500629b.lua" },
 	[10253235584] = { "build a base rng", "https://api.luarmor.net/files/v3/loaders/8a79f287291004efa1558612b10a7387.lua" },
-	[8841437826]  = { "capybaras vs plants", "https://api.luarmor.net/files/v3/loaders/3be50428e6ad8a1f7be774c8704966cc.lua" },
+	[10690360998] = { "jump for animals", "https://api.luarmor.net/files/v3/loaders/3be50428e6ad8a1f7be774c8704966cc.lua" },
 	[10506207587] = { "magic loot", "https://api.luarmor.net/files/v3/loaders/7f3dc0d8adb6c6283364da22589103e5.lua" },
 	[10153098880] = { "greedy growers", "https://api.luarmor.net/files/v3/loaders/df230805784849c4ee2dd9790ce3bf0f.lua" },
 	[10440833423] = { "greedy growers", "https://api.luarmor.net/files/v3/loaders/df230805784849c4ee2dd9790ce3bf0f.lua" },
