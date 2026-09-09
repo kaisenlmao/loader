@@ -1465,8 +1465,6 @@ local function UnpackUDim2(Value: any): UDim2?
     return UDim2.new(Value.xs, Value.xo, Value.ys, Value.yo)
 end
 
-Library.LayoutBoxes = {}
-Library.FloatFrames = {}
 Library.OnLayoutChanged = nil
 Library.LayoutRestoring = false
 
@@ -1505,148 +1503,11 @@ function Library:LayoutChanged()
     end
 end
 
-function Library:RegisterLayoutBox(Box: any, Id: string, Header: GuiObject?, Enabled: boolean)
-    Box.LayoutId = Id
-    Box.PopOutEnabled = Enabled == true
-    Box.PoppedOut = false
-    Library.LayoutBoxes[Id] = Box
-    if not Box.PopOutEnabled or not Header then
-        return
-    end
-
-    local DockParent = Box.BoxHolder.Parent
-    local DockSize = Box.BoxHolder.Size
-    local DockPosition = Box.BoxHolder.Position
-    local DockOrder = Box.BoxHolder.LayoutOrder
-    local DockAutomaticSize = Box.BoxHolder.AutomaticSize
-    local Float
-    local DragConnections = {}
-    local function DisconnectDragConnections()
-        for _, Connection in DragConnections do
-            if Connection.Connected then
-                Connection:Disconnect()
-            end
-        end
-        table.clear(DragConnections)
-    end
-    local function ClearPopOut()
-        DisconnectDragConnections()
-        if Float then
-            local Index = table.find(Library.FloatFrames, Float)
-            if Index then
-                table.remove(Library.FloatFrames, Index)
-            end
-        end
-        Float = nil
-        Box.PopOutFloat = nil
-        Box.PoppedOut = false
-    end
-    local function Clamp(FloatFrame: GuiObject)
-        local Inset = GuiService:GetGuiInset()
-        local Viewport = workspace.CurrentCamera.ViewportSize
-        local Margin = 8
-        local Position, Size, AbsolutePosition = FloatFrame.Position, FloatFrame.AbsoluteSize, FloatFrame.AbsolutePosition
-        local MinX, MinY = Inset.X + Margin, Inset.Y + Margin
-        local X = math.clamp(AbsolutePosition.X, MinX, math.max(MinX, Viewport.X - Size.X - Margin))
-        local Y = math.clamp(AbsolutePosition.Y, MinY, math.max(MinY, Viewport.Y - Size.Y - Margin))
-        FloatFrame.Position = UDim2.new(Position.X.Scale, Position.X.Offset + X - AbsolutePosition.X, Position.Y.Scale, Position.Y.Offset + Y - AbsolutePosition.Y)
-    end
-    local function Dock()
-        if not Float then return end
-        Box.BoxHolder.Parent = DockParent
-        Box.BoxHolder.Size = DockSize
-        Box.BoxHolder.Position = DockPosition
-        Box.BoxHolder.LayoutOrder = DockOrder
-        Box.BoxHolder.AutomaticSize = DockAutomaticSize
-        DisconnectDragConnections()
-        local Index = table.find(Library.FloatFrames, Float)
-        if Index then table.remove(Library.FloatFrames, Index) end
-        Float:Destroy()
-        Float = nil
-        Box.PopOutFloat = nil
-        Box.PoppedOut = false
-        Library:LayoutChanged()
-    end
-    Box._PopOutCleanup = function()
-        ClearPopOut()
-    end
-    local function PopOut()
-        if Float then return end
-        Float = New("Frame", {
-            Active = true,
-            BackgroundColor3 = "BackgroundColor",
-            Position = UDim2.fromOffset(Box.BoxHolder.AbsolutePosition.X, Box.BoxHolder.AbsolutePosition.Y),
-            Size = UDim2.fromOffset(math.max(180, Box.BoxHolder.AbsoluteSize.X), math.max(48, Box.BoxHolder.AbsoluteSize.Y)),
-            ZIndex = 100,
-            Parent = ScreenGui,
-        })
-        Library:AddOutline(Float)
-        New("UICorner", { CornerRadius = UDim.new(0, Library.CornerRadius), Parent = Float })
-        Box.BoxHolder.Parent = Float
-        Box.BoxHolder.Size = UDim2.fromScale(1, 1)
-        Box.PopOutFloat = Float
-        Box.PoppedOut = true
-        Clamp(Float)
-        table.insert(Library.FloatFrames, Float)
-        local StartInput, StartPosition
-        table.insert(DragConnections, Header.InputBegan:Connect(function(Input)
-            if IsClickInput(Input) then
-                StartInput, StartPosition = Input, Float.Position
-            end
-        end))
-        table.insert(DragConnections, UserInputService.InputChanged:Connect(function(Input)
-            if StartInput and IsHoverInput(Input) then
-                local Delta = Input.Position - StartInput.Position
-                Float.Position = UDim2.new(StartPosition.X.Scale, StartPosition.X.Offset + Delta.X, StartPosition.Y.Scale, StartPosition.Y.Offset + Delta.Y)
-                Clamp(Float)
-                Library:SetSnapGuides(Float, true)
-            end
-        end))
-        table.insert(DragConnections, UserInputService.InputEnded:Connect(function(Input)
-            if Input == StartInput then
-                StartInput = nil
-                Clamp(Float)
-                Library:SnapFrame(Float)
-                Library:SetSnapGuides(nil, false)
-                Library:LayoutChanged()
-            end
-        end))
-        Library:LayoutChanged()
-    end
-    local DetachIcon = Library:GetIcon("square-arrow-out-up-right")
-    local Button = New("ImageButton", {
-        AnchorPoint = Vector2.new(1, 0.5), BackgroundTransparency = 1, Position = UDim2.new(1, -30, 0.5, 0),
-        Size = UDim2.fromOffset(20, 20), Image = DetachIcon and DetachIcon.Url or "", ImageColor3 = "FontColor",
-        ImageRectOffset = DetachIcon and DetachIcon.ImageRectOffset or Vector2.zero, ImageRectSize = DetachIcon and DetachIcon.ImageRectSize or Vector2.zero, Parent = Header,
-    })
-    Button.MouseButton1Click:Connect(function()
-        if Box.PoppedOut then Dock() else PopOut() end
-    end)
-    Box.SetPoppedOut = function(_, Value, Position, Size)
-        if Value then
-            PopOut()
-            if Float then
-                local SavedPosition, SavedSize = UnpackUDim2(Position), UnpackUDim2(Size)
-                if SavedPosition then Float.Position = SavedPosition end
-                if SavedSize then Float.Size = SavedSize end
-                Clamp(Float)
-            end
-        else
-            Dock()
-        end
-    end
-end
-
 function Library:GetLayout()
-    local Data = { Version = 1, Main = {}, Boxes = {} }
+    local Data = { Version = 1, Main = {} }
     if Library.LayoutMain then
         Data.Main.Position = PackUDim2(Library.LayoutMain.Position)
         Data.Main.Size = PackUDim2(Library.LayoutMain.Size)
-    end
-    for Id, Box in Library.LayoutBoxes do
-        if Box.PoppedOut and Box.PopOutFloat then
-            Data.Boxes[Id] = { Detached = true, Position = PackUDim2(Box.PopOutFloat.Position), Size = PackUDim2(Box.PopOutFloat.Size) }
-        end
     end
     return Data
 end
@@ -1672,15 +1533,6 @@ function Library:SetLayout(Data: any)
             Library:SnapFrame(Library.LayoutMain)
         end
     end
-    local Boxes = typeof(Data.Boxes) == "table" and Data.Boxes or {}
-    for Id, Box in Library.LayoutBoxes do
-        local State = Boxes[Id]
-        if Box.PoppedOut and (typeof(State) ~= "table" or State.Detached ~= true) then
-            Box:SetPoppedOut(false)
-        elseif Box.PopOutEnabled and typeof(State) == "table" and State.Detached == true then
-            Box:SetPoppedOut(true, State.Position, State.Size)
-        end
-    end
     end)
     Library.LayoutRestoring = false
     return Ok
@@ -1688,9 +1540,6 @@ end
 
 function Library:ResetLayout()
     Library.LayoutRestoring = true
-    for _, Box in Library.LayoutBoxes do
-        if Box.PoppedOut and Box.SetPoppedOut then Box:SetPoppedOut(false) end
-    end
     if Library.LayoutMain and Library.LayoutDefault then
         Library.LayoutMain.Position = Library.LayoutDefault.Position
         Library.LayoutMain.Size = Library.LayoutDefault.Size
@@ -2280,13 +2129,6 @@ function Library:Unload()
     end
     Library.Unloaded = true
 
-    for _, Box in Library.LayoutBoxes do
-        if Box._PopOutCleanup then
-            Box._PopOutCleanup()
-        end
-    end
-    table.clear(Library.FloatFrames)
-    table.clear(Library.LayoutBoxes)
     if Library.SnapGuideX then
         Library.SnapGuideX.Visible = false
         Library.SnapGuideY.Visible = false
@@ -8255,9 +8097,6 @@ function Library:CreateWindow(WindowInfo)
                 Minimized = false,
                 Visible = true,
             }
-            Tab.LayoutBoxIndex = (Tab.LayoutBoxIndex or 0) + 1
-            Library:RegisterLayoutBox(Groupbox, string.format("%s:group:%s:%d", Tab.LayoutId or "tab", tostring(Info.Name or "group"), Tab.LayoutBoxIndex), GroupboxHolder, Info.PopOut ~= false)
-
             function Groupbox:Resize()
                 if Groupbox.Minimized then
                     return
@@ -8287,10 +8126,6 @@ function Library:CreateWindow(WindowInfo)
             function Groupbox:SetVisible(Visible: boolean)
                 Groupbox.Visible = Visible
                 Groupbox.BoxHolder.Visible = Visible
-                if Groupbox.PopOutFloat then
-                    Groupbox.PopOutFloat.Visible = Visible and Library.Toggled
-                end
-
                 Groupbox:Resize()
 
                 if Visible == true and Library.Searching then
@@ -8382,9 +8217,6 @@ function Library:CreateWindow(WindowInfo)
                 Holder = TabboxHolder,
                 Tabs = {}
             }
-            Tab.LayoutBoxIndex = (Tab.LayoutBoxIndex or 0) + 1
-            Library:RegisterLayoutBox(Tabbox, string.format("%s:tabbox:%s:%d", Tab.LayoutId or "tab", tostring(Info.Name or "tabbox"), Tab.LayoutBoxIndex), TabboxButtons, Info.PopOut ~= false)
-
             function Tabbox:UpdateCorners()
                 for _, Tab in Tabbox.Tabs do
                     Tab:UpdateCorners()
@@ -9579,10 +9411,6 @@ function Library:CreateWindow(WindowInfo)
         end
 
         MainFrame.Visible = Library.Toggled
-        for _, Float in Library.FloatFrames do
-            Float.Visible = Library.Toggled
-        end
-
         if Library.Toggled and Library.HistoryOpen then
             Library.NotificationUnread = 0
             Library:RefreshNotificationHistory()
