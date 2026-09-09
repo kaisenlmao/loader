@@ -118,7 +118,94 @@ local SaveManager = {} do
                 end
             end,
         },
+        PriorityDropdown = {
+            Save = function(idx, object)
+                return { type = "PriorityDropdown", idx = idx, order = object:GetValue() }
+            end,
+            Load = function(idx, data)
+                local object = SaveManager.Library.Options[idx]
+                if object then
+                    object:SetValue(data.order)
+                end
+            end,
+        },
     }
+
+    local function isFiniteNumber(value)
+        return type(value) == "number" and value == value and value ~= math.huge and value ~= -math.huge
+    end
+
+    local function isScalar(value)
+        return type(value) == "string" or isFiniteNumber(value)
+    end
+
+    local function isDenseScalarArray(value)
+        if typeof(value) ~= "table" then return false end
+        local count = 0
+        for key, item in value do
+            if not isFiniteNumber(key) or key < 1 or key % 1 ~= 0 or not isScalar(item) then return false end
+            count += 1
+        end
+        for index = 1, count do
+            if value[index] == nil then return false end
+        end
+        return true
+    end
+
+    local function validMultiValue(value)
+        if type(value) == "string" then return true end
+        if typeof(value) ~= "table" then return false end
+        local dense = isDenseScalarArray(value)
+        if dense then return true end
+        for key, item in value do
+            if not isScalar(key) or type(item) ~= "boolean" then return false end
+        end
+        return true
+    end
+
+    function SaveManager:_ValidateConfig(decoded)
+        if typeof(decoded) ~= "table" or typeof(decoded.objects) ~= "table" then return false, "invalid config data" end
+        if decoded.custom ~= nil and typeof(decoded.custom) ~= "table" then return false, "invalid custom data" end
+        for _, record in decoded.objects do
+            if typeof(record) ~= "table" or type(record.type) ~= "string" or not isScalar(record.idx) then return false, "invalid config record" end
+            local typeName = record.type
+            if typeName == "Toggle" and type(record.value) ~= "boolean" then return false, "invalid toggle value"
+            elseif typeName == "Slider" and not ((type(record.value) == "string" or type(record.value) == "number") and isFiniteNumber(tonumber(record.value))) then return false, "invalid slider value"
+            elseif typeName == "Input" and type(record.text) ~= "string" then return false, "invalid input value"
+            elseif typeName == "ColorPicker" and (type(record.value) ~= "string" or not record.value:match("^%x%x%x%x%x%x$") or (record.transparency ~= nil and not (isFiniteNumber(record.transparency) and record.transparency >= 0 and record.transparency <= 1))) then return false, "invalid color value"
+            elseif typeName == "KeyPicker" and (type(record.key) ~= "string" or (record.mode ~= nil and type(record.mode) ~= "string") or (record.modifiers ~= nil and not isDenseScalarArray(record.modifiers))) then return false, "invalid keybind value"
+            elseif typeName == "PriorityDropdown" and not isDenseScalarArray(record.order) then return false, "invalid priority value"
+            elseif typeName == "Dropdown" then
+                local target = self.Library and self.Library.Options[record.idx]
+                if (target and target.Multi) or (not target and record.multi == true) then
+                    if not validMultiValue(record.value) then return false, "invalid dropdown value" end
+                elseif record.value ~= nil and not isScalar(record.value) and type(record.value) ~= "boolean" then
+                    return false, "invalid dropdown value"
+                end
+            end
+            if typeName == "KeyPicker" and record.modifiers then
+                for _, modifier in record.modifiers do
+                    if type(modifier) ~= "string" then return false, "invalid keybind modifier" end
+                end
+            end
+        end
+        return true
+    end
+
+    function SaveManager:_ApplyConfig(decoded)
+        local valid, err = self:_ValidateConfig(decoded)
+        if not valid then return false, err end
+        for _, option in decoded.objects do
+            local parser = self.Parser[option.type]
+            if parser and not self.Ignore[option.idx] then
+                task.spawn(function()
+                    local ok, loadErr = pcall(parser.Load, option.idx, option)
+                    if not ok then warn("Failed to load config option: " .. tostring(loadErr)) end
+                end)
+            end
+        end
+        return self:_LoadCustomData(decoded.custom)
+    end
 
     function SaveManager:_CancelAutoSave()
         if self._autoSaveThread then
@@ -262,10 +349,13 @@ local SaveManager = {} do
         if (not name) then
             return false, "no config file is selected"
         end
-        SaveManager:CheckFolderTree()
+        local foldersOk = pcall(SaveManager.CheckFolderTree, SaveManager)
+        if not foldersOk then return false, "folder setup error" end
 
         local fullPath = self.Folder .. "/settings/" .. name .. ".json"
-        if SaveManager:CheckSubFolder(true) then
+        local subfolderOk, hasSubfolder = pcall(self.CheckSubFolder, self, true)
+        if not subfolderOk then return false, "folder setup error" end
+        if hasSubfolder then
             fullPath = self.Folder .. "/settings/" .. self.SubFolder .. "/" .. name .. ".json"
         end
 
@@ -302,7 +392,8 @@ local SaveManager = {} do
             return false, "failed to encode data"
         end
 
-        writefile(fullPath, encoded)
+        local wrote = pcall(writefile, fullPath, encoded)
+        if not wrote then return false, "write file error" end
         return true
     end
 
@@ -329,27 +420,23 @@ local SaveManager = {} do
         if (not name) then
             return false, "no config file is selected"
         end
-        SaveManager:CheckFolderTree()
+        local foldersOk = pcall(SaveManager.CheckFolderTree, SaveManager)
+        if not foldersOk then return false, "folder setup error" end
 
         local file = self.Folder .. "/settings/" .. name .. ".json"
-        if SaveManager:CheckSubFolder(true) then
+        local subfolderOk, hasSubfolder = pcall(self.CheckSubFolder, self, true)
+        if not subfolderOk then return false, "folder setup error" end
+        if hasSubfolder then
             file = self.Folder .. "/settings/" .. self.SubFolder .. "/" .. name .. ".json"
         end
 
         if not isfile(file) then return false, "invalid file" end
 
-        local success, decoded = pcall(HttpService.JSONDecode, HttpService, readfile(file))
+        local readOk, raw = pcall(readfile, file)
+        if not readOk then return false, "read file error" end
+        local success, decoded = pcall(HttpService.JSONDecode, HttpService, raw)
         if not success then return false, "decode error" end
-
-        for _, option in decoded.objects do
-            if not option.type then continue end
-            if not self.Parser[option.type] then continue end
-            if self.Ignore[option.idx] then continue end
-
-            task.spawn(self.Parser[option.type].Load, option.idx, option)
-        end
-
-        local customLoaded, customError = self:_LoadCustomData(decoded.custom)
+        local customLoaded, customError = self:_ApplyConfig(decoded)
         if not customLoaded then
             return false, customError
         end
@@ -669,14 +756,17 @@ local SaveManager = {} do
     end
 
     function SaveManager:SaveAccountConfigs(data)
-        SaveManager:CheckFolderTree()
-        if SaveManager:CheckSubFolder(true) then end
+        local foldersOk = pcall(SaveManager.CheckFolderTree, SaveManager)
+        if not foldersOk then return false, "folder setup error" end
+        local subfolderOk = pcall(SaveManager.CheckSubFolder, SaveManager, true)
+        if not subfolderOk then return false, "folder setup error" end
 
         local ok, encoded = pcall(HttpService.JSONEncode, HttpService, data)
-        if not ok then return false end
+        if not ok then return false, "failed to encode account configs" end
 
         local path = self:_GetAccountConfigsPath()
-        pcall(writefile, path, encoded)
+        local wrote = pcall(writefile, path, encoded)
+        if not wrote then return false, "write file error" end
         return true
     end
 
@@ -856,8 +946,14 @@ local SaveManager = {} do
                                 return
                             end
 
-                            accountConfigs[account] = config
-                            self:SaveAccountConfigs(accountConfigs)
+                            local proposed = table.clone(accountConfigs)
+                            proposed[account] = config
+                            local saved, err = self:SaveAccountConfigs(proposed)
+                            if not saved then
+                                self.Library:Notify("Failed to assign account config: " .. tostring(err))
+                                return
+                            end
+                            accountConfigs = proposed
                             self.Library.Options.SaveManager_AccList:SetItems(self:_BuildAccountListItems(accountConfigs))
                             self.Library:Notify(string.format("Assigned %q → %q", account, config))
                         end,
@@ -874,8 +970,14 @@ local SaveManager = {} do
                             end
 
                             local account = sel.Key
-                            accountConfigs[account] = nil
-                            self:SaveAccountConfigs(accountConfigs)
+                            local proposed = table.clone(accountConfigs)
+                            proposed[account] = nil
+                            local saved, err = self:SaveAccountConfigs(proposed)
+                            if not saved then
+                                self.Library:Notify("Failed to remove account config: " .. tostring(err))
+                                return
+                            end
+                            accountConfigs = proposed
                             self.Library.Options.SaveManager_AccList:SetItems(self:_BuildAccountListItems(accountConfigs))
                             self.Library.Options.SaveManager_AccList:ClearSelection()
                             self.Library:Notify(string.format("Removed account %q", account))
@@ -994,22 +1096,13 @@ local SaveManager = {} do
             end
 
             local success, decoded = pcall(HttpService.JSONDecode, HttpService, raw)
-            if not success or typeof(decoded) ~= "table" or not decoded.objects then
+            if not success then
                 self.Library:Notify("Invalid config data")
                 return
             end
-
-            for _, option in decoded.objects do
-                if not option.type then continue end
-                if not self.Parser[option.type] then continue end
-                if self.Ignore[option.idx] then continue end
-
-                task.spawn(self.Parser[option.type].Load, option.idx, option)
-            end
-
-            local customLoaded, customError = self:_LoadCustomData(decoded.custom)
+            local customLoaded, customError = self:_ApplyConfig(decoded)
             if not customLoaded then
-                self.Library:Notify("Config imported with partial data: " .. customError)
+                self.Library:Notify("Failed to import config: " .. tostring(customError))
                 return
             end
 
