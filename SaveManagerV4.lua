@@ -570,9 +570,9 @@ local SaveManager = {} do
 
     function SaveManager:_SetLastLoadedConfig(name, source)
         self.LastLoadedConfig = tostring(name)
-        self.LastLoadedConfigSource = source or "manual"
+        self.LastLoadedConfigSource = tostring(source or "manual")
         if self.LastLoadedConfigLabel then
-            self.LastLoadedConfigLabel:SetText(("<font color='#9AA0A6'>Last loaded:</font> <font color='#8FD0FF'>%s</font>"):format(richEscape(self.LastLoadedConfig)))
+            self.LastLoadedConfigLabel:SetText(("<font color='#9AA0A6'>Last loaded:</font> <font color='#8FD0FF'>%s</font> <font color='#9AA0A6'>- %s</font>"):format(richEscape(self.LastLoadedConfig), richEscape(self.LastLoadedConfigSource)))
         end
     end
 
@@ -797,7 +797,7 @@ local SaveManager = {} do
         section:AddButton("Reset layout", function()
             self.Library:ResetLayout()
         end)
-        self.LastLoadedConfigLabel = section:AddLabel("<font color='#9AA0A6'>Last loaded:</font> <font color='#8FD0FF'>none</font>", true)
+        self.LastLoadedConfigLabel = section:AddLabel("<font color='#9AA0A6'>Last loaded:</font> <font color='#8FD0FF'>none</font> <font color='#9AA0A6'>- none</font>", true)
 
         local savedAutoSave = self:GetAutoSaveState()
         local autoSaveConfig = self:GetAutoloadConfig()
