@@ -83,7 +83,7 @@ local GAMES = {
 
 	[118635363908336] = { "grand blue", "https://api.luarmor.net/files/v3/loaders/296f665b08928bd4d810161801b37acf.lua" },
 
-	[99108783264633]  = { "build a base rng", "https://api.luarmor.net/files/v3/loaders/d5247fade99791a0e90e3275348b00bf.lua" },
+	[124216119978534] = { "ride a pet", "https://api.luarmor.net/files/v3/loaders/d5247fade99791a0e90e3275348b00bf.lua" },
 
 	[126870639873289] = { "jump for animals", "https://api.luarmor.net/files/v3/loaders/5908510f57805eb2c203441f1cb30712.lua" },
 
@@ -120,7 +120,7 @@ local GAMES_BY_UNIVERSE = {
 	[10267363348] = { "drain the lake", "https://api.luarmor.net/files/v3/loaders/774e7e358882d9c55b4649af0f0a22fc.lua" },
 	[7613921865]  = { "runaways", "https://api.luarmor.net/files/v3/loaders/63b1f8053d24c544db6faacf6977e6cc.lua" },
 	[7585140258]  = { "runaways", "https://api.luarmor.net/files/v3/loaders/63b1f8053d24c544db6faacf6977e6cc.lua" },
-	[10253235584] = { "build a base rng", "https://api.luarmor.net/files/v3/loaders/d5247fade99791a0e90e3275348b00bf.lua" },
+	[10035204815] = { "ride a pet", "https://api.luarmor.net/files/v3/loaders/d5247fade99791a0e90e3275348b00bf.lua" },
 	[10690360998] = { "jump for animals", "https://api.luarmor.net/files/v3/loaders/5908510f57805eb2c203441f1cb30712.lua" },
 	[10506207587] = { "magic loot", "https://api.luarmor.net/files/v3/loaders/9e831929e8a54c724cb7ae06675bae3d.lua" },
 	[10153098880] = { "greedy growers", "https://api.luarmor.net/files/v3/loaders/c15214847b4bf55c68507a56ebc4646b.lua" },
