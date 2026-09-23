@@ -1,4 +1,3 @@
--- Obsidian configuration persistence. No filesystem work is allowed to abort module loading.
 local HttpService = game:GetService("HttpService")
 local Players = game:GetService("Players")
 local FileSystem = {
