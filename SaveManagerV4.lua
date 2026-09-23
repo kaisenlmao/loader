@@ -401,7 +401,8 @@ function SaveManager:_ApplyConfig(Data)
         for _, TogglePass in ipairs({ false, true }) do
             for _, Record in ipairs(Data.objects) do
                 local Parser = self.Parser[Record.type]
-                if Parser and not self.Ignore[Record.idx] and (Record.type == "Toggle") == TogglePass then
+                local Target = Record.type == "Toggle" and self.Library.Toggles[Record.idx] or self.Library.Options[Record.idx]
+                if Parser and not self.Ignore[Record.idx] and not (Target and Target.Internal) and (Record.type == "Toggle") == TogglePass then
                     local Ran, Failure = pcall(Parser.Load, Record.idx, Record)
                     if not Ran then return false, "failed to load " .. tostring(Record.idx) .. ": " .. tostring(Failure) end
                 end
@@ -603,7 +604,7 @@ function SaveManager:SetAutoSave(Enabled, Persist)
     return true
 end
 function SaveManager:_HookElement(Index, Element)
-    if self._autoSaveHooked[Element] or self.Ignore[Index] or not self.Parser[Element.Type] then return end
+    if Element.Internal or self._autoSaveHooked[Element] or self.Ignore[Index] or not self.Parser[Element.Type] then return end
     local Previous, Library = Element.Changed, self.Library
     local Wrapper = function(...)
         if Previous then Library:SafeCallback(Previous, ...) end
@@ -618,7 +619,7 @@ function SaveManager:SetupAutoSave()
     if type(self.Library.OnOptionChanged) == "function" then
         local Library = self.Library
         self._optionConnection = Library:OnOptionChanged(function(Element)
-            if self.Library == Library and not self.Ignore[Element.Idx] and self.Parser[Element.Type] then self:_QueueAutoSave() end
+            if self.Library == Library and not Element.Internal and not self.Ignore[Element.Idx] and self.Parser[Element.Type] then self:_QueueAutoSave() end
         end)
     else
         -- Compatibility fallback for older libraries. Re-run after adding controls there.
@@ -686,7 +687,9 @@ function SaveManager:_RefreshStatus()
         if self.AutoSave then Text = DestinationError and "Auto save unavailable" or (Destination ~= "none" and ("Auto save → " .. Destination) or "Auto save needs a destination") end
         self.Library.Window:SetStatus(Text, DestinationError and self.AutoSave and "Error" or "Info")
     end
-    if self.LastLoadedConfigLabel then self.LastLoadedConfigLabel:SetText("<font color='#9AA0A6'>Last loaded:</font> <font color='#8FD0FF'>" .. escaped(self.LastLoadedConfig) .. "</font> <font color='#9AA0A6'>— " .. escaped(self.LastLoadedConfigSource) .. "</font>") end
+    if self.LastLoadedConfigLabel then
+        self.LastLoadedConfigLabel:SetText(self.LastLoadedConfig == "none" and "No profile loaded" or ("Loaded: " .. escaped(self.LastLoadedConfig) .. " (" .. escaped(self.LastLoadedConfigSource) .. ")"))
+    end
     local Autoload, AutoloadError = self:GetAutoloadConfig()
     if self.AutoloadConfigLabel then self.AutoloadConfigLabel:SetText("Autoload: " .. (AutoloadError and escaped(AutoloadError) or escaped(Autoload))) end
     if self.AutoSaveLabel then self.AutoSaveLabel:SetText("Auto save: " .. (self.AutoSave and (Autoload ~= "none" and escaped(Autoload) or "no destination — set autoload") or "disabled")) end
@@ -698,6 +701,7 @@ function SaveManager:BuildConfigSection(Tab)
     local Library = self.Library
     local Options = Library.Options
     local Section = Tab:AddRightGroupbox("Profiles", "folder-cog")
+    if Section.SetDescription then Section:SetDescription("Save a setup, choose a startup profile, or transfer settings.") end
     local Pages = Section:AddTabbox()
     local Profiles = Pages:AddTab("Profiles", "folder")
     local Startup = Pages:AddTab("Startup", "play")
@@ -711,9 +715,13 @@ function SaveManager:BuildConfigSection(Tab)
     end
     local function Selected() return Options.SaveManager_ConfigList.Value end
     local SelectionButtons = {}
+    local SelectionHint
     local function UpdateSelection()
         local Disabled = Selected() == nil
         for _, Button in ipairs(SelectionButtons) do Button:SetDisabled(Disabled) end
+        if SelectionHint then
+            SelectionHint:SetText(Disabled and "Select a saved profile to load, overwrite, delete, or assign it at startup." or ("Selected: " .. escaped(Selected())))
+        end
     end
     local function Refresh(Keep)
         local Names, Error = self:RefreshConfigList()
@@ -723,7 +731,6 @@ function SaveManager:BuildConfigSection(Tab)
         self:_RefreshStatus()
         if Error then self:_Notice(Error, "Error") end
     end
-    Profiles:AddDivider({ Text = "Profiles" })
     Profiles:AddInput("SaveManager_ConfigName", { Text = "Config name", ClearTextOnFocus = false, Placeholder = "Name a new profile", MaxLength = 128 })
     Profiles:AddButton("Create config", function()
         local Name = Options.SaveManager_ConfigName.Value
@@ -736,11 +743,14 @@ function SaveManager:BuildConfigSection(Tab)
         if Report(Ok, Err, "Created " .. Name) then Refresh(Name) end
     end)
     Profiles:AddDropdown("SaveManager_ConfigList", {
-        Text = "Config list", Values = self:RefreshConfigList(), AllowNull = true, Searchable = true,
+        Text = "Config list", Values = self:RefreshConfigList(), AllowNull = true, Searchable = true, Expandable = false,
+        Placeholder = "Select a saved profile", EmptyText = "No profiles yet. Create one above.",
         Callback = UpdateSelection,
     })
+    SelectionHint = Profiles:AddLabel("Select a saved profile to load, overwrite, delete, or assign it at startup.", true)
     local function SelectionButton(Text, Callback, Risky, Destination)
-        local Button = (Destination or Profiles):AddButton({ Text = Text, Func = Callback, Disabled = true, Risky = Risky == true, DisabledTooltip = "Select a config first" })
+        local Variant = Risky and "Destructive" or ((Text == "Load config" or Text == "Set as autoload") and "Primary" or "Secondary")
+        local Button = (Destination or Profiles):AddButton({ Text = Text, Func = Callback, Variant = Variant, Disabled = true, Risky = Risky == true, DisabledTooltip = "Select a config first" })
         SelectionButtons[#SelectionButtons + 1] = Button
         return Button
     end
