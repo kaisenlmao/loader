@@ -202,6 +202,7 @@ function SaveManager:SetIgnoreIndexes(Indexes)
     for _, Index in ipairs(Indexes) do self.Ignore[Index] = true end
 end
 function SaveManager:IgnoreThemeSettings()
+    self.IgnoreAppearanceTheme = true
     self:SetIgnoreIndexes({ "BackgroundColor", "MainColor", "AccentColor", "OutlineColor", "FontColor", "FontFace", "ThemeManager_ThemeList", "ThemeManager_CustomThemeList", "ThemeManager_CustomThemeName" })
 end
 function SaveManager:RegisterCustomData(Key, Save, Load, Validate)
@@ -334,7 +335,7 @@ function SaveManager:_Serialize(Redact)
     local Data = { version = 1, objects = {} }
     local function Collect(Registry)
         local Keys = {}
-        for Index, Object in pairs(Registry) do if not self.Ignore[Index] and Object.Type and self.Parser[Object.Type] then Keys[#Keys + 1] = Index end end
+        for Index, Object in pairs(Registry) do if not self.Ignore[Index] and not Object.Internal and Object.Type and self.Parser[Object.Type] then Keys[#Keys + 1] = Index end end
         table.sort(Keys, function(A, B) return (type(A) .. tostring(A)) < (type(B) .. tostring(B)) end)
         for _, Index in ipairs(Keys) do
             local Object = Registry[Index]
@@ -342,7 +343,7 @@ function SaveManager:_Serialize(Redact)
             if not Ok or type(Record) ~= "table" then return false, "failed to serialize " .. tostring(Index) .. ": " .. tostring(Record) end
             if Redact and Record.type == "Input" then
                 local Lower = tostring(Record.text):lower()
-                if Lower:find("discord%.com/api/webhooks/") or Lower:find("discordapp%.com/api/webhooks/") or Lower:find("hooks%.slack%.com/") then Record.text = "" end
+                if Object.Sensitive or Lower:find("discord%.com/api/webhooks/") or Lower:find("discordapp%.com/api/webhooks/") or Lower:find("hooks%.slack%.com/") then Record.text = "" end
             end
             Data.objects[#Data.objects + 1] = Record
         end
@@ -649,6 +650,17 @@ function SaveManager:SetLibrary(Library)
         if self.Library == Library and not Library.LayoutRestoring then self:_QueueAutoSave() end
     end
     Library.OnLayoutChanged = self._layoutCallback
+    self.CustomData.StudioPreferences = nil
+    if type(Library.GetPreferences) == "function" and type(Library.SetPreferences) == "function" then
+        self:RegisterCustomData("StudioPreferences", function()
+            local Data = Library:GetPreferences()
+            if self.IgnoreAppearanceTheme then Data.Theme, Data.Colors, Data.Font = nil, nil, nil end
+            return Data
+        end, function(Data)
+            if self.IgnoreAppearanceTheme then Data = copy(Data); Data.Theme, Data.Colors, Data.Font = nil, nil, nil end
+            return Library:SetPreferences(Data)
+        end, function(Data) return Library:ValidatePreferences(Data) end)
+    end
     self.CustomData.LibraryLayout = nil
     if type(Library.GetLayout) == "function" and type(Library.SetLayout) == "function" then
         self:RegisterCustomData("LibraryLayout", function() return Library:GetLayout() end,
@@ -668,6 +680,12 @@ function SaveManager:_SetLastLoadedConfig(Name, Source)
 end
 function SaveManager:_RefreshStatus()
     if self.Library and self.Library.Unloaded then return end
+    if self.Library and self.Library.Window and self.Library.Window.SetStatus then
+        local Destination, DestinationError = self:GetAutoloadConfig()
+        local Text = self.LastLoadedConfig == "none" and "No profile loaded" or ("Loaded: " .. self.LastLoadedConfig)
+        if self.AutoSave then Text = DestinationError and "Auto save unavailable" or (Destination ~= "none" and ("Auto save → " .. Destination) or "Auto save needs a destination") end
+        self.Library.Window:SetStatus(Text, DestinationError and self.AutoSave and "Error" or "Info")
+    end
     if self.LastLoadedConfigLabel then self.LastLoadedConfigLabel:SetText("<font color='#9AA0A6'>Last loaded:</font> <font color='#8FD0FF'>" .. escaped(self.LastLoadedConfig) .. "</font> <font color='#9AA0A6'>— " .. escaped(self.LastLoadedConfigSource) .. "</font>") end
     local Autoload, AutoloadError = self:GetAutoloadConfig()
     if self.AutoloadConfigLabel then self.AutoloadConfigLabel:SetText("Autoload: " .. (AutoloadError and escaped(AutoloadError) or escaped(Autoload))) end
@@ -679,7 +697,11 @@ function SaveManager:BuildConfigSection(Tab)
     assert(self.Library, "Must call SaveManager:SetLibrary first")
     local Library = self.Library
     local Options = Library.Options
-    local Section = Tab:AddRightGroupbox("Configuration", "folder-cog")
+    local Section = Tab:AddRightGroupbox("Profiles", "folder-cog")
+    local Pages = Section:AddTabbox()
+    local Profiles = Pages:AddTab("Profiles", "folder")
+    local Startup = Pages:AddTab("Startup", "play")
+    local Transfer = Pages:AddTab("Transfer", "arrow-left-right")
     self:SetIgnoreIndexes({ "SaveManager_ConfigList", "SaveManager_ConfigName", "SaveManager_ImportData", "SaveManager_AutoSave", "SaveManager_AccName", "SaveManager_AccConfig", "SaveManager_AccList" })
     local function Report(Ok, Error, Message)
         if not Ok then self:_Notice(tostring(Error), "Error"); return false end
@@ -701,9 +723,9 @@ function SaveManager:BuildConfigSection(Tab)
         self:_RefreshStatus()
         if Error then self:_Notice(Error, "Error") end
     end
-    Section:AddDivider({ Text = "Profiles" })
-    Section:AddInput("SaveManager_ConfigName", { Text = "Config name", ClearTextOnFocus = false, Placeholder = "Name a new profile", MaxLength = 128 })
-    Section:AddButton("Create config", function()
+    Profiles:AddDivider({ Text = "Profiles" })
+    Profiles:AddInput("SaveManager_ConfigName", { Text = "Config name", ClearTextOnFocus = false, Placeholder = "Name a new profile", MaxLength = 128 })
+    Profiles:AddButton("Create config", function()
         local Name = Options.SaveManager_ConfigName.Value
         local Path, Error = self:_ConfigPath(Name)
         if not Path then self:_Notice(Error, "Error"); return end
@@ -713,12 +735,12 @@ function SaveManager:BuildConfigSection(Tab)
         local Ok, Err = self:Save(Name)
         if Report(Ok, Err, "Created " .. Name) then Refresh(Name) end
     end)
-    Section:AddDropdown("SaveManager_ConfigList", {
+    Profiles:AddDropdown("SaveManager_ConfigList", {
         Text = "Config list", Values = self:RefreshConfigList(), AllowNull = true, Searchable = true,
         Callback = UpdateSelection,
     })
-    local function SelectionButton(Text, Callback, Risky)
-        local Button = Section:AddButton({ Text = Text, Func = Callback, Disabled = true, Risky = Risky == true, DisabledTooltip = "Select a config first" })
+    local function SelectionButton(Text, Callback, Risky, Destination)
+        local Button = (Destination or Profiles):AddButton({ Text = Text, Func = Callback, Disabled = true, Risky = Risky == true, DisabledTooltip = "Select a config first" })
         SelectionButtons[#SelectionButtons + 1] = Button
         return Button
     end
@@ -746,26 +768,26 @@ function SaveManager:BuildConfigSection(Tab)
             if Report(Ok, Err, "Deleted " .. Name) then Refresh() end
         end })
     end, true)
-    Section:AddButton("Refresh list", function() Refresh(Selected()) end)
-    self.LastLoadedConfigLabel = Section:AddLabel("", true)
-    Section:AddDivider({ Text = "Automatic loading" })
+    Profiles:AddButton("Refresh list", function() Refresh(Selected()) end)
+    self.LastLoadedConfigLabel = Profiles:AddLabel("", true)
+    Startup:AddDivider({ Text = "Automatic loading" })
     SelectionButton("Set as autoload", function()
         local Name = Selected()
         if not Name then return end
         local Ok, Err = self:SaveAutoloadConfig(Name)
         Report(Ok, Err, "Autoload set to " .. Name)
-    end)
-    Section:AddButton("Reset autoload", function()
+    end, false, Startup)
+    Startup:AddButton("Reset autoload", function()
         local Ok, Err = self:DeleteAutoLoadConfig()
         Report(Ok, Err, "Autoload cleared")
     end)
-    self.AutoloadConfigLabel = Section:AddLabel("", true)
-    self.AutoSaveLabel = Section:AddLabel("", true)
+    self.AutoloadConfigLabel = Startup:AddLabel("", true)
+    self.AutoSaveLabel = Startup:AddLabel("", true)
     local PreferenceError
     self.AutoSave, PreferenceError = self:GetAutoSaveState()
     if PreferenceError then self:_Notice(PreferenceError, "Error") end
     local UpdatingAutoSave = false
-    Section:AddToggle("SaveManager_AutoSave", {
+    Startup:AddToggle("SaveManager_AutoSave", {
         Text = "Auto Save Config", Default = self.AutoSave,
         Tooltip = "Saves to the autoload profile, not the last manually loaded or account profile.",
         Callback = function(Value)
@@ -780,7 +802,7 @@ function SaveManager:BuildConfigSection(Tab)
         end,
     })
     if self.AutoSave then self:SetupAutoSave() end
-    self.AccountConfigLabel = Section:AddLabel("", true)
+    self.AccountConfigLabel = Startup:AddLabel("", true)
     local AccountData, AccountReadError = self:GetAccountConfigs()
     local Dialog
     local function RefreshAccounts()
@@ -828,18 +850,18 @@ function SaveManager:BuildConfigSection(Tab)
     end })
     Dialog:AddInput("SaveManager_AccName", { Text = "Account name", Default = Players.LocalPlayer and Players.LocalPlayer.Name or "", ClearTextOnFocus = false, Placeholder = "Exact username" })
     Dialog:AddDropdown("SaveManager_AccConfig", { Text = "Config to load", Values = self:RefreshConfigList(), AllowNull = true, Searchable = true })
-    Section:AddButton("Account configs", function() RefreshAccounts(); Dialog:SetButtonDisabled("Remove", true); Dialog:Show() end)
-    Section:AddDivider({ Text = "Layout and transfer" })
-    Section:AddButton("Reset layout", function() Library:ResetLayout() end)
-    Section:AddButton("Export config", function()
+    Startup:AddButton("Account configs", function() RefreshAccounts(); Dialog:SetButtonDisabled("Remove", true); Dialog:Show() end)
+    Transfer:AddDivider({ Text = "Layout and transfer" })
+    Transfer:AddButton("Reset layout", function() Library:ResetLayout() end)
+    Transfer:AddButton("Export config", function()
         local Ok, Text = self:Export()
         if not Ok then self:_Notice(Text, "Error"); return end
         if type(setclipboard) ~= "function" then self:_Notice("Clipboard capability unavailable.", "Error"); return end
         local Copied, Error = pcall(setclipboard, Text)
         Report(Copied, not Copied and tostring(Error) or nil, "Config exported to clipboard")
     end)
-    Section:AddInput("SaveManager_ImportData", { Text = "Import Config", ClearTextOnFocus = false, Placeholder = "Paste config JSON or an HTTP(S) URL" })
-    Section:AddButton("Import config", function()
+    Transfer:AddInput("SaveManager_ImportData", { Text = "Import Config", ClearTextOnFocus = false, Placeholder = "Paste config JSON or an HTTP(S) URL" })
+    Transfer:AddButton("Import config", function()
         local Raw = Options.SaveManager_ImportData.Value
         Library:Confirm({ Title = "Import config?", Description = "Apply these settings to the current UI? Importing does not create a saved profile.", ConfirmText = "Import", Callback = function(Confirmed)
             if not Confirmed then return end
